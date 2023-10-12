@@ -7,7 +7,6 @@ public partial class FordContext : DbContext
 {
     public FordContext()
     {
-        Database.EnsureCreated();
     }
 
     public FordContext(DbContextOptions<FordContext> options)
