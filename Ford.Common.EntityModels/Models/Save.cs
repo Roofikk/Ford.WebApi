@@ -4,18 +4,17 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Ford.EntityModels
+namespace Ford.Models
 {
-    public partial class HorseSafe
+    public partial class Save
     {
-        public HorseSafe()
+        public Save()
         {
-            Bones = new HashSet<Bone>();
-            Vectors = new HashSet<Vector>();
+            SaveBones = new HashSet<SaveBone>();
         }
 
         [Key]
-        public long HorseSaveId { get; set; }
+        public long SaveId { get; set; }
         public long? HorseId { get; set; }
         [Column(TypeName = "nvarchar(30)")]
         public string? Header { get; set; }
@@ -23,11 +22,9 @@ namespace Ford.EntityModels
         public byte[]? Date { get; set; }
 
         [ForeignKey("HorseId")]
-        [InverseProperty("HorseSaves")]
+        [InverseProperty("Saves")]
         public virtual Horse? Horse { get; set; }
-        [InverseProperty("HorseSave")]
-        public virtual ICollection<Bone> Bones { get; set; }
-        [InverseProperty("Bone")]
-        public virtual ICollection<Vector> Vectors { get; set; }
+        [InverseProperty("Save")]
+        public virtual ICollection<SaveBone> SaveBones { get; set; }
     }
 }

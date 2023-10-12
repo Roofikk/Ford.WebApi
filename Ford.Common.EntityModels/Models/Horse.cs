@@ -4,13 +4,13 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Ford.EntityModels
+namespace Ford.Models
 {
     public partial class Horse
     {
         public Horse()
         {
-            HorseSaves = new HashSet<HorseSafe>();
+            Saves = new HashSet<Save>();
             Users = new HashSet<User>();
         }
 
@@ -30,7 +30,7 @@ namespace Ford.EntityModels
         public string? Country { get; set; }
 
         [InverseProperty("Horse")]
-        public virtual ICollection<HorseSafe> HorseSaves { get; set; }
+        public virtual ICollection<Save> Saves { get; set; }
 
         [ForeignKey("HorseId")]
         [InverseProperty("Horses")]
