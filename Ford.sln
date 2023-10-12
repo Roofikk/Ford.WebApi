@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34202.233
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ford.WebApi", "Ford.WebApi\Ford.WebApi.csproj", "{8C96AA76-F431-49C4-A982-3DE27F86E498}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ford.WebApi", "Ford.WebApi\Ford.WebApi.csproj", "{8C96AA76-F431-49C4-A982-3DE27F86E498}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ford.Common.EntityModels", "Ford.Common.EntityModels\Ford.Common.EntityModels.csproj", "{2081DC90-EA50-4848-8844-98B29B68F8F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ford.DataContext.Sqlite", "Ford.DataContext.Sqlite\Ford.DataContext.Sqlite.csproj", "{EA540C6F-811A-4866-B01B-BF0468556959}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{8C96AA76-F431-49C4-A982-3DE27F86E498}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8C96AA76-F431-49C4-A982-3DE27F86E498}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8C96AA76-F431-49C4-A982-3DE27F86E498}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2081DC90-EA50-4848-8844-98B29B68F8F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2081DC90-EA50-4848-8844-98B29B68F8F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2081DC90-EA50-4848-8844-98B29B68F8F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2081DC90-EA50-4848-8844-98B29B68F8F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA540C6F-811A-4866-B01B-BF0468556959}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA540C6F-811A-4866-B01B-BF0468556959}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA540C6F-811A-4866-B01B-BF0468556959}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA540C6F-811A-4866-B01B-BF0468556959}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
