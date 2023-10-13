@@ -14,7 +14,8 @@ namespace Ford.Models
         }
 
         [Key]
-        public long UserId { get; set; }
+        [Column(TypeName = "nvarchar(40)")]
+        public string? UserId { get; set; }
         [Column(TypeName = "nvarchar(20)")]
         public string Login { get; set; } = null!;
         [Column(TypeName = "nvarchar(32)")]
