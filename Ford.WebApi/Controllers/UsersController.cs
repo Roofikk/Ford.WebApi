@@ -39,7 +39,11 @@ public class UsersController : ControllerBase
         }
     }
 
+<<<<<<< HEAD
     [HttpPost]
+=======
+    [HttpPut]
+>>>>>>> fd2406408c30953c1df3325bf16765645faa6bf7
     public async Task<IActionResult> Create([FromBody]User user)
     {
         if (await db.IsExist(user.UserId, user.Login))
@@ -49,10 +53,17 @@ public class UsersController : ControllerBase
         
         User? created = await db.CreateAsync(user);
         await db.Save();
+<<<<<<< HEAD
         return Created("", created);
     }
 
     [HttpPut]
+=======
+        return Ok(created);
+    }
+
+    [HttpPost]
+>>>>>>> fd2406408c30953c1df3325bf16765645faa6bf7
     public async Task<IActionResult> Update([FromBody]User user)
     {
         if (user.UserId is null)
