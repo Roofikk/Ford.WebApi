@@ -19,7 +19,7 @@ namespace Ford.Models
         [Column(TypeName = "nvarchar(20)")]
         public string Login { get; set; } = null!;
         [Column(TypeName = "nvarchar(32)")]
-        public string Password { get; set; } = null!;
+        public string? Password { get; set; } = null!;
         [Column(TypeName = "nvarchar(128)")]
         public string? Email { get; set; }
         [Column(TypeName = "nvarchar(20)")]

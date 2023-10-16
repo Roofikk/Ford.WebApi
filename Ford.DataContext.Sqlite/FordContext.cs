@@ -72,6 +72,8 @@ public partial class FordContext : DbContext
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(e => e.UserId).ValueGeneratedNever();
+
+            entity.
         });
 
         OnModelCreatingPartial(modelBuilder);

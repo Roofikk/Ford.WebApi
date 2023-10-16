@@ -27,37 +27,38 @@ public class IdentityController : ControllerBase
         this.configuration = configuration;
     }
 
-    [HttpPost("auth")]
-    public IActionResult Registration([FromBody] User user)
-    {
-        if (user is null)
-        {
-            return BadRequest("User is null");
-        }
+    //[HttpPost("auth")]
+    //public async Task<IActionResult> Registration([FromBody] User user)
+    //{
+    //    if (user is null)
+    //    {
+    //        return BadRequest("User is null");
+    //    }
 
-        if (string.IsNullOrEmpty(user.Login) || string.IsNullOrEmpty(user.Password))
-        {
-            return BadRequest("Login or password can not be empty");
-        }
+    //    if (string.IsNullOrEmpty(user.Login) || string.IsNullOrEmpty(user.Password))
+    //    {
+    //        return BadRequest("Login or password can not be empty");
+    //    }
 
-        User? existingUser = db.Users.FirstOrDefault(u => u.Login == user.Login);
+    //    User? existingUser = db.Users.FirstOrDefault(u => u.Login == user.Login);
 
-        if (existingUser is not null)
-        {
-            return Conflict($"User with {user.Login} login is existing");
-        }
-        user.UserId = Guid.NewGuid().ToString();
+    //    if (existingUser is not null)
+    //    {
+    //        return Conflict($"User with {user.Login} login is existing");
+    //    }
 
-        db.Users.Add(user);
-        db.SaveChanges();
+    //    user.UserId = Guid.NewGuid().ToString();
 
-        return Ok();
-    }
+    //    db.Users.Add(user);
+    //    db.SaveChanges();
+
+    //    return Ok();
+    //}
 
     // check success existing user hash and get secret encrypting token
     // user should decrypt token on our local machine
     [HttpPost("token")]
-    public IActionResult GetToken([FromBody] TokenGenerationRequest request)
+    public IActionResult GetToken([FromBody]TokenGenerationRequest request)
     {
         if (db.Users.SingleOrDefault(u => u.UserId == request.UserId) is null)
         {

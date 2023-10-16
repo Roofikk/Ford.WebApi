@@ -1,6 +1,8 @@
 ﻿using Ford.DataContext.Sqlite;
 using Ford.Models;
+using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace Ford.WebApi.Controllers;
 
@@ -8,24 +10,23 @@ namespace Ford.WebApi.Controllers;
 [ApiController]
 public class UsersController : ControllerBase
 {
-    private readonly FordContext db;
+    private readonly IUserRepository db;
 
-    public UsersController(FordContext db)
+    public UsersController(IUserRepository db)
     {
         this.db = db;
     }
 
-    //[Authorize]
-    //Need role admin to access thit method
-    [HttpGet("{id}")]
-    public IActionResult Get(string id)
+    [HttpGet()]
+    public async Task<IActionResult> Get(string? id)
     {
         if (!string.IsNullOrEmpty(id))
         {
-            User? user = db.Users.FirstOrDefault(u => u.UserId == id);
+            User? user = await db.RetrieveAsync(id);
+
             if (user is null)
             {
-                return BadRequest("User not found");
+                return NotFound();
             }
             else
             {
@@ -34,7 +35,63 @@ public class UsersController : ControllerBase
         }
         else
         {
-            return BadRequest("Id can not be null");
+            return Ok(await db.RetrieveAllAsync());
+        }
+    }
+
+    [HttpPut]
+    public async Task<IActionResult> Create([FromBody]User user)
+    {
+        if (await db.IsExist(user.UserId, user.Login))
+        {
+            return BadRequest("User already exists");
+        }
+        
+        User? created = await db.CreateAsync(user);
+        await db.Save();
+        return Ok(created);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Update([FromBody]User user)
+    {
+        if (user.UserId is null)
+        {
+            return BadRequest("User id can not be null");
+        }
+
+        if (await db.IsExist(user.UserId))
+        {
+            User? updated = await db.UpdateAsync(user);
+            await db.Save();
+            return Ok(updated);
+        }
+        else
+        {
+            return NotFound(user);
+        }
+    }
+
+    [HttpDelete]
+    public async Task<IActionResult> Delete(string id)
+    {
+        if (await db.IsExist(id))
+        {
+            bool success = await db.DeleteAsync(id);
+
+            if (success)
+            {
+                await db.Save();
+                return Ok();
+            }
+            else
+            {
+                return BadRequest($"Failed to delete user by id: {id}");
+            }
+        }
+        else
+        {
+            return NotFound($"User is not found by id: {id}");
         }
     }
 }
