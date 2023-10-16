@@ -35,9 +35,9 @@ namespace Ford.Models
         [Column(TypeName = "nvarchar(25)")]
         public string? Country { get; set; }
         [Column(TypeName = "datetime")]
-        public DateTime[]? BirthDate { get; set; }
+        public DateTime? BirthDate { get; set; }
         [Column(TypeName = "datetime")]
-        public DateTime[] RegistrationDate { get; set; }
+        public DateTime? RegistrationDate { get; set; }
 
         [ForeignKey("UserId")]
         [InverseProperty("Users")]

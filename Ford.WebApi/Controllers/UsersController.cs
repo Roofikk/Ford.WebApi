@@ -39,11 +39,7 @@ public class UsersController : ControllerBase
         }
     }
 
-<<<<<<< HEAD
     [HttpPost]
-=======
-    [HttpPut]
->>>>>>> fd2406408c30953c1df3325bf16765645faa6bf7
     public async Task<IActionResult> Create([FromBody]User user)
     {
         if (await db.IsExist(user.UserId, user.Login))
@@ -53,17 +49,10 @@ public class UsersController : ControllerBase
         
         User? created = await db.CreateAsync(user);
         await db.Save();
-<<<<<<< HEAD
         return Created("", created);
     }
 
     [HttpPut]
-=======
-        return Ok(created);
-    }
-
-    [HttpPost]
->>>>>>> fd2406408c30953c1df3325bf16765645faa6bf7
     public async Task<IActionResult> Update([FromBody]User user)
     {
         if (user.UserId is null)
@@ -80,39 +69,6 @@ public class UsersController : ControllerBase
         else
         {
             return Ok(await db.RetrieveAllAsync());
-        }
-    }
-
-    [HttpPut]
-    public async Task<IActionResult> Create([FromBody]User user)
-    {
-        if (await db.IsExist(user.UserId, user.Login))
-        {
-            return BadRequest("User already exists");
-        }
-        
-        User? created = await db.CreateAsync(user);
-        await db.Save();
-        return Ok(created);
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Update([FromBody]User user)
-    {
-        if (user.UserId is null)
-        {
-            return BadRequest("User id can not be null");
-        }
-
-        if (await db.IsExist(user.UserId))
-        {
-            User? updated = await db.UpdateAsync(user);
-            await db.Save();
-            return Ok(updated);
-        }
-        else
-        {
-            return NotFound(user);
         }
     }
 

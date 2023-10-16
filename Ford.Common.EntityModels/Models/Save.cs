@@ -20,7 +20,7 @@ namespace Ford.Models
         [Column(TypeName = "nvarchar(30)")]
         public string? Header { get; set; }
         [Column(TypeName = "datetime")]
-        public byte[]? Date { get; set; }
+        public DateTime? Date { get; set; }
 
         [ForeignKey("HorseId")]
         [InverseProperty("Saves")]
