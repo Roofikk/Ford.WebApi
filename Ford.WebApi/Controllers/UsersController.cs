@@ -1,8 +1,8 @@
-﻿using Ford.DataContext.Sqlite;
+﻿using AutoMapper;
 using Ford.Models;
+using Ford.WebApi.Dtos.User;
 using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace Ford.WebApi.Controllers;
 
@@ -11,13 +11,18 @@ namespace Ford.WebApi.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IUserRepository db;
+    private readonly IMapper mapper;
 
-    public UsersController(IUserRepository db)
+    public UsersController(IUserRepository db, IMapper mapper)
     {
         this.db = db;
+        this.mapper = mapper;
     }
 
     [HttpGet()]
+    [ProducesResponseType(typeof(IEnumerable<UserGettingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(string? id)
     {
         if (!string.IsNullOrEmpty(id))
@@ -26,53 +31,69 @@ public class UsersController : ControllerBase
 
             if (user is null)
             {
-                return NotFound();
+                return NotFound(user);
             }
             else
             {
-                return Ok(user);
+                var mappingUser = mapper.Map<UserGettingDto>(user);
+                return Ok(mappingUser);
             }
         }
         else
         {
-            return Ok(await db.RetrieveAllAsync());
+            IEnumerable<User> users = await db.RetrieveAllAsync();
+            return Ok(mapper.Map<IEnumerable<UserGettingDto>>(users));
         }
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody]User user)
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<UserGettingDto>> Create([FromBody]UserCreationDto user)
     {
-        if (await db.IsExist(user.UserId, user.Login))
+        User sourceUser = mapper.Map<User>(user);
+
+        if (await db.IsExist(sourceUser.UserId, sourceUser.Login))
         {
             return BadRequest("User already exists");
         }
         
-        User? created = await db.CreateAsync(user);
+        User? created = await db.CreateAsync(sourceUser);
         await db.Save();
-        return Created("", created);
+
+        UserGettingDto responseUser = mapper.Map<UserGettingDto>(created);
+        return CreatedAtAction(nameof(Get), new { id = created.UserId }, responseUser);
     }
 
     [HttpPut]
-    public async Task<IActionResult> Update([FromBody]User user)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserGettingDto>> Update([FromBody]UserForUpdateDto user)
     {
-        if (user.UserId is null)
+        User sourceUser = mapper.Map<User>(user);
+
+        if (sourceUser.UserId is null)
         {
             return BadRequest("User id can not be null");
         }
 
-        if (await db.IsExist(user.UserId))
+        User? updated = await db.UpdateAsync(sourceUser);
+
+        if (updated is null)
         {
-            User? updated = await db.UpdateAsync(user);
-            await db.Save();
-            return Ok(updated);
+            return NotFound(user);
         }
-        else
-        {
-            return Ok(await db.RetrieveAllAsync());
-        }
+
+        await db.Save();
+        UserGettingDto response = mapper.Map<UserGettingDto>(updated);
+        return Ok(response);
     }
 
     [HttpDelete]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(string id)
     {
         if (await db.IsExist(id))
@@ -86,12 +107,12 @@ public class UsersController : ControllerBase
             }
             else
             {
-                return BadRequest($"Failed to delete user by id: {id}");
+                return BadRequest();
             }
         }
         else
         {
-            return NotFound($"User is not found by id: {id}");
+            return NotFound();
         }
     }
 }

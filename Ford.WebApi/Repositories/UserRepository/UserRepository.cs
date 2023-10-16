@@ -16,7 +16,6 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> CreateAsync(User user)
     {
-        user.UserId = Guid.NewGuid().ToString();
         EntityEntry<User> added = await db.Users.AddAsync(user);
         return added.Entity;
     }
@@ -34,9 +33,16 @@ public class UserRepository : IUserRepository
     public async Task<User?> UpdateAsync(User user)
     {
         User? find = await db.Users.FirstOrDefaultAsync(u => u.UserId == user.UserId);
-        db.Entry(find).State = EntityState.Detached;
-        EntityEntry<User> updated = db.Users.Update(user);
-        return updated.Entity;
+
+        if (find is null)
+        {
+            return null;
+        }
+
+        user.Login = find.Login;
+        db.Entry(find).CurrentValues.SetValues(user);
+        db.Entry(find).Property(f => f.Login).CurrentValue = find.Login;
+        return user;
     }
 
     public async Task<bool> DeleteAsync(string id)

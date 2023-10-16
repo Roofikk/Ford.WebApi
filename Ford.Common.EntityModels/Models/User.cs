@@ -15,15 +15,15 @@ namespace Ford.Models
 
         [Key]
         [Column(TypeName = "nvarchar(40)")]
-        public string? UserId { get; set; }
+        public string UserId { get; set; }
         [Column(TypeName = "nvarchar(20)")]
-        public string? Login { get; set; } = null!;
+        public string Login { get; set; } = null!;
         [Column(TypeName = "nvarchar(32)")]
-        public string? Password { get; set; } = null!;
+        public string Password { get; set; } = null!;
         [Column(TypeName = "nvarchar(128)")]
         public string? Email { get; set; }
         [Column(TypeName = "nvarchar(20)")]
-        public string? Name { get; set; }
+        public string Name { get; set; }
         [Column(TypeName = "nvarchar(20)")]
         public string? LastName { get; set; }
         [Column(TypeName = "nvarchar(24)")]
@@ -37,7 +37,9 @@ namespace Ford.Models
         [Column(TypeName = "datetime")]
         public DateTime? BirthDate { get; set; }
         [Column(TypeName = "datetime")]
-        public DateTime? RegistrationDate { get; set; }
+        public DateTime CreationDate { get; set; }
+        [Column(TypeName = "datetime")]
+        public DateTime LastUpdatedDate { get; set; }
 
         [ForeignKey("UserId")]
         [InverseProperty("Users")]
