@@ -14,8 +14,9 @@ namespace Ford.Models
         }
 
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long SaveId { get; set; }
-        public long? HorseId { get; set; }
+        public long HorseId { get; set; }
         [Column(TypeName = "nvarchar(30)")]
         public string? Header { get; set; }
         [Column(TypeName = "datetime")]

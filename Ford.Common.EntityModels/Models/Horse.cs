@@ -15,13 +15,14 @@ namespace Ford.Models
         }
 
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long HorseId { get; set; }
         [Column(TypeName = "ncarchar(15)")]
         public string? HorseName { get; set; }
         [Column(TypeName = "datetime")]
         public byte[]? BirthDate { get; set; }
         [Column(TypeName = "nvarchar(8)")]
-        public string Sex { get; set; } = null!;
+        public string? Sex { get; set; }
         [Column(TypeName = "nvarchar(15)")]
         public string? City { get; set; }
         [Column(TypeName = "nvarchar(15)")]

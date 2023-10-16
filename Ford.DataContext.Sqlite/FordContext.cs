@@ -44,7 +44,6 @@ public partial class FordContext : DbContext
                     j =>
                     {
                         j.HasKey("HorseId", "UserId");
-
                         j.ToTable("HorseOwners");
                     });
         });
