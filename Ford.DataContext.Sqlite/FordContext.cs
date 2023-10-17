@@ -33,7 +33,7 @@ public partial class FordContext : DbContext
     {
         modelBuilder.Entity<Horse>(entity =>
         {
-            entity.Property(e => e.HorseId).ValueGeneratedNever();
+            entity.Property(e => e.HorseId).ValueGeneratedOnAdd();
 
             entity.HasMany(d => d.Users)
                 .WithMany(p => p.Horses)

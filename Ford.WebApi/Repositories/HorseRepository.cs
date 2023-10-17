@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ford.WebApi.Repositories;
 
-public class HorseRepository : IRepository<Horse, long>
+public class HorseRepository : IHorseRepository
 {
     private readonly FordContext db;
 
@@ -27,6 +27,13 @@ public class HorseRepository : IRepository<Horse, long>
 
     public async Task<Horse?> CreateAsync(Horse entity)
     {
+        IEnumerable<User> find =  db.Users.Intersect(entity.Users);
+
+        if (find.Count() != entity.Users.Count)
+        {
+            return null;
+        }
+
         await db.Horses.AddAsync(entity);
         return entity;
     }
@@ -41,7 +48,9 @@ public class HorseRepository : IRepository<Horse, long>
         }
 
         entity.CreationDate = find.CreationDate;
+        entity.Saves = find.Saves;
         db.Entry(find).CurrentValues.SetValues(entity);
+        db.Entry(find).State = EntityState.Modified;
         return entity;
     }
 

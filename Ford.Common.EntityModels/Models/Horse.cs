@@ -22,7 +22,7 @@ namespace Ford.Models
         [Column(TypeName = "datetime")]
         public DateTime? BirthDate { get; set; }
         [Column(TypeName = "nvarchar(6)")]
-        public Sex? Sex { get; set; }
+        public Sex Sex { get; set; }
         [Column(TypeName = "nvarchar(15)")]
         public string? City { get; set; }
         [Column(TypeName = "nvarchar(15)")]
@@ -30,7 +30,7 @@ namespace Ford.Models
         [Column(TypeName = "nvarchar(15)")]
         public string? Country { get; set; }
         [Column(TypeName = "datetime")]
-        public DateTime? CreationDate { get; set; }
+        public DateTime CreationDate { get; set; }
 
         [InverseProperty("Horse")]
         public virtual ICollection<Save> Saves { get; set; }
