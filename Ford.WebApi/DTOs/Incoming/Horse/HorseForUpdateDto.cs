@@ -1,6 +1,4 @@
-﻿using Ford.Models;
-
-namespace Ford.WebApi.Dtos.Horse;
+﻿namespace Ford.WebApi.Dtos.Horse;
 
 public class HorseForUpdateDto
 {
