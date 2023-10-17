@@ -1,4 +1,5 @@
 using Ford.DataContext.Sqlite;
+using Ford.Models;
 using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -34,7 +35,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRepository<User, string>, UserRepository>();
+builder.Services.AddScoped<IRepository<Horse, long>, HorseRepository>();
 
 var app = builder.Build();
 

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Ford.WebApi.Repositories;
 
-public class UserRepository : IUserRepository
+public class UserRepository : IRepository<User, string>
 {
     private FordContext db;
 
@@ -20,9 +20,10 @@ public class UserRepository : IUserRepository
         return added.Entity;
     }
 
-    public Task<IEnumerable<User>> RetrieveAllAsync()
+    public async Task<IEnumerable<User>?> RetrieveAllAsync()
     {
-        return Task.FromResult<IEnumerable<User>>(db.Users);
+        IEnumerable<User>? users = await db.Users.ToListAsync();
+        return users;
     }
 
     public async Task<User?> RetrieveAsync(string id)
@@ -32,7 +33,7 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> UpdateAsync(User user)
     {
-        User? find = await db.Users.FirstOrDefaultAsync(u => u.UserId == user.UserId);
+        User? find = await RetrieveAsync(user.UserId);
 
         if (find is null)
         {
@@ -40,14 +41,14 @@ public class UserRepository : IUserRepository
         }
 
         user.Login = find.Login;
+        user.CreationDate = find.CreationDate;
         db.Entry(find).CurrentValues.SetValues(user);
-        db.Entry(find).Property(f => f.Login).CurrentValue = find.Login;
         return user;
     }
 
     public async Task<bool> DeleteAsync(string id)
     {
-        User? user = await db.Users.FirstOrDefaultAsync(u => u.UserId == id);
+        User? user = await RetrieveAsync(id);
 
         if (user is not null)
         {
@@ -60,19 +61,18 @@ public class UserRepository : IUserRepository
         }
     }
 
-    public async Task<bool> IsExist(string userId, string userLogin)
+    public async Task<bool> IsExistAsync(User user)
     {
-        User? user = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId || u.Login == userLogin);
-        return user is not null;
+        return await IsExistAsync(user.UserId);
     }
 
-    public async Task<bool> IsExist(string id)
+    public async Task<bool> IsExistAsync(string id)
     {
         User? user = await db.Users.FirstOrDefaultAsync(u => u.UserId == id);
         return user is not null;
     }
 
-    public async Task<bool> Save()
+    public async Task<bool> SaveAsync()
     {
         return (await db.SaveChangesAsync()) == 1;
     }

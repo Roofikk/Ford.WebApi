@@ -1,5 +1,6 @@
 ﻿using Ford.DataContext.Sqlite;
 using Ford.Models;
+using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ford.WebApi.Controllers
@@ -8,24 +9,54 @@ namespace Ford.WebApi.Controllers
     [ApiController]
     public class HorsesController : ControllerBase
     {
-        private readonly FordContext db;
+        IRepository<Horse, long> db;
 
-        public HorsesController(FordContext db)
+        public HorsesController(IRepository<Horse, long> db)
         {
             this.db = db;
         }
 
-        [HttpPut]
-        public IActionResult Create(Horse horse)
+        [HttpGet]
+        [Route("/{userId}")]
+        public async Task<ActionResult> Get(string userId, long? horseId)
         {
-            Horse? existed = db.Horses.FirstOrDefault(h => h.HorseId == horse.HorseId);
+            var hs = await db.RetrieveAllAsync();
 
-            if (existed is not null)
-                return BadRequest("Current horse is exist");
-
-            db.Horses.Add(horse);
-            db.SaveChanges();
-            return Ok(horse);
+            if (hs is not null && hs.Any())
+            {
+                IEnumerable<Horse> userHorses = hs.Where(h => h.Users.Any(u => u.UserId == userId));
+                if (horseId is null)
+                {
+                    return Ok(userHorses);
+                }
+                else
+                {
+                    Horse? horse = hs.FirstOrDefault(h => h.Users.Any(u => u.UserId == userId) && h.HorseId == horseId);
+                    return Ok(horse);
+                }
+            }
+            else
+            {
+                return NoContent();
+            }
         }
+
+        //[HttpPost]
+        //public async Task<ActionResult<Horse>> Create(string? userId, Horse horse)
+        //{
+
+        //}
+
+        //[HttpPut]
+        //public async Task<ActionResult<Horse>> Update(Horse horse)
+        //{
+
+        //}
+
+        //[HttpDelete]
+        //public async Task<ActionResult> Delete()
+        //{
+
+        //}
     }
 }

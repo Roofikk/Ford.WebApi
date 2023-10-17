@@ -10,10 +10,10 @@ namespace Ford.WebApi.Controllers;
 [ApiController]
 public class UsersController : ControllerBase
 {
-    private readonly IUserRepository db;
+    private readonly IRepository<User, string> db;
     private readonly IMapper mapper;
 
-    public UsersController(IUserRepository db, IMapper mapper)
+    public UsersController(IRepository<User, string> db, IMapper mapper)
     {
         this.db = db;
         this.mapper = mapper;
@@ -53,13 +53,13 @@ public class UsersController : ControllerBase
     {
         User sourceUser = mapper.Map<User>(user);
 
-        if (await db.IsExist(sourceUser.UserId, sourceUser.Login))
+        if (await db.IsExistAsync(sourceUser))
         {
             return BadRequest("User already exists");
         }
         
         User? created = await db.CreateAsync(sourceUser);
-        await db.Save();
+        await db.SaveAsync();
 
         UserGettingDto responseUser = mapper.Map<UserGettingDto>(created);
         return CreatedAtAction(nameof(Get), new { id = created.UserId }, responseUser);
@@ -85,7 +85,7 @@ public class UsersController : ControllerBase
             return NotFound(user);
         }
 
-        await db.Save();
+        await db.SaveAsync();
         UserGettingDto response = mapper.Map<UserGettingDto>(updated);
         return Ok(response);
     }
@@ -96,13 +96,13 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(string id)
     {
-        if (await db.IsExist(id))
+        if (await db.IsExistAsync(id))
         {
             bool success = await db.DeleteAsync(id);
 
             if (success)
             {
-                await db.Save();
+                await db.SaveAsync();
                 return Ok();
             }
             else

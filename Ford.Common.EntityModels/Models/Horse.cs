@@ -17,18 +17,20 @@ namespace Ford.Models
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long HorseId { get; set; }
-        [Column(TypeName = "ncarchar(15)")]
-        public string? HorseName { get; set; }
+        [Column(TypeName = "ncarchar(30)")]
+        public string Name { get; set; }
         [Column(TypeName = "datetime")]
-        public byte[]? BirthDate { get; set; }
-        [Column(TypeName = "nvarchar(8)")]
-        public string? Sex { get; set; }
+        public DateTime? BirthDate { get; set; }
+        [Column(TypeName = "nvarchar(6)")]
+        public Sex? Sex { get; set; }
         [Column(TypeName = "nvarchar(15)")]
         public string? City { get; set; }
         [Column(TypeName = "nvarchar(15)")]
         public string? Region { get; set; }
         [Column(TypeName = "nvarchar(15)")]
         public string? Country { get; set; }
+        [Column(TypeName = "datetime")]
+        public DateTime? CreationDate { get; set; }
 
         [InverseProperty("Horse")]
         public virtual ICollection<Save> Saves { get; set; }
@@ -36,5 +38,12 @@ namespace Ford.Models
         [ForeignKey("HorseId")]
         [InverseProperty("Horses")]
         public virtual ICollection<User> Users { get; set; }
+    }
+
+    public enum Sex
+    {
+        None,
+        Male,
+        Female
     }
 }
