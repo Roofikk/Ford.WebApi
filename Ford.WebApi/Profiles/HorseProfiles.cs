@@ -80,6 +80,29 @@ namespace Ford.WebApi.Profiles
                 .ForMember(
                     dest => dest.CreationDate,
                     opt => opt.MapFrom(src => DateTime.Now));
+
+            CreateMap<HorseForUpdateDto, Horse>()
+                .ForMember(
+                    dest => dest.HorseId,
+                    opt => opt.MapFrom(src => src.HorseId))
+                .ForMember(
+                    dest => dest.Name,
+                    opt => opt.MapFrom(src => src.Name))
+                .ForMember(
+                    dest => dest.BirthDate,
+                    opt => opt.MapFrom(src => src.BirthDate))
+                .ForMember(
+                    dest => dest.Sex,
+                    opt => opt.MapFrom(src => string.IsNullOrEmpty(src.Sex) ? Sex.None : Enum.Parse<Sex>(src.Sex)))
+                .ForMember(
+                    dest => dest.City,
+                    opt => opt.MapFrom(src => src.City))
+                .ForMember(
+                    dest => dest.Region,
+                    opt => opt.MapFrom(src => src.Region))
+                .ForMember(
+                    dest => dest.Country,
+                    opt => opt.MapFrom(src => src.Country));
         }
     }
 }

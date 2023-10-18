@@ -79,7 +79,7 @@ namespace Ford.WebApi.Controllers
         [HttpPost]
         public async Task<ActionResult<Horse>> Create([FromBody] HorseForCreationDto horse)
         {
-            Horse mappingHorse = mapper.Map<Horse>(horse);
+            Horse horseDto = mapper.Map<Horse>(horse);
 
             if (horse.UserIds is not null && horse.UserIds.Any())
             {
@@ -90,28 +90,30 @@ namespace Ford.WebApi.Controllers
                     return BadRequest();
                 }
 
-                mappingHorse.Users = users.ToList();
+                horseDto.Users = users.ToList();
             }
 
-            db.Horses.Add(mappingHorse);
+            db.Horses.Add(horseDto);
             await db.SaveChangesAsync();
-            return Created($"api/[controller]?horseId={mappingHorse.HorseId}", mappingHorse);
+
+            HorseRetrievingDto horseRetrievingDto = mapper.Map<HorseRetrievingDto>(horseDto);
+            return Created($"api/[controller]?horseId={horseRetrievingDto.HorseId}", horseRetrievingDto);
         }
 
-        //[HttpPut]
-        //public async Task<ActionResult<Horse>> Update([FromBody]Horse horse)
-        //{
-        //    Horse? updatedHorse = await db.UpdateAsync(horse);
+        [HttpPut]
+        public async Task<ActionResult<Horse>> Update([FromBody]HorseForUpdateDto horse)
+        {
+            Horse? entity = await db.Horses.FirstOrDefaultAsync(h => h.HorseId == horse.HorseId);
 
-        //    if (updatedHorse is not null)
-        //    {
-        //        return Ok(updatedHorse);
-        //    }
-        //    else
-        //    {
-        //        return BadRequest();
-        //    }
-        //}
+            if (entity is null)
+            {
+                return NotFound();
+            }
+
+            Horse horseDto = mapper.Map<Horse>(horse);
+            db.Entry(entity).CurrentValues.SetValues(horse);
+            return Ok(entity);
+        }
 
         //[HttpDelete]
         //public async Task<ActionResult> Delete(long id)
