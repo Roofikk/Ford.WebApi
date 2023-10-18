@@ -56,6 +56,11 @@ namespace Ford.WebApi.Controllers
         public async Task<ActionResult<Horse>> Create([FromBody]HorseForCreationDto horse)
         {
             Horse mappingHorse = mapper.Map<Horse>(horse);
+
+            if (await db.IsExistAsync(mappingHorse))
+            {
+                return BadRequest();
+            }
             Horse? createdHorse = await db.CreateAsync(mappingHorse);
 
             if (createdHorse is not null)
@@ -69,23 +74,33 @@ namespace Ford.WebApi.Controllers
         }
 
         [HttpPut]
-        public async Task<ActionResult<Horse>> Update(Horse horse)
+        public async Task<ActionResult<Horse>> Update([FromBody]Horse horse)
         {
             Horse? updatedHorse = await db.UpdateAsync(horse);
+
             if (updatedHorse is not null)
             {
                 return Ok(updatedHorse);
             }
             else
             {
-                BadRequest();
+                return BadRequest();
             }
         }
 
-        //[HttpDelete]
-        //public async Task<ActionResult> Delete()
-        //{
+        [HttpDelete]
+        public async Task<ActionResult> Delete(long id)
+        {
+            bool result = await db.DeleteAsync(id);
 
-        //}
+            if (result)
+            {
+                return Ok();
+            }
+            else
+            {
+                return NotFound();
+            }
+        }
     }
 }

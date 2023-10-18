@@ -77,4 +77,18 @@ public class HorseRepository : IHorseRepository
     {
         return (await db.SaveChangesAsync()) == 1;
     }
+
+    //public async Task<bool> AddUser(string userId, Horse horse)
+    //{
+    //    User? user = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+
+    //    if (user is null)
+    //    {
+    //        return false;
+    //    }
+
+    //    Horse entryHorse = horse;
+    //    entryHorse.Users.Add(user);
+    //    db.Entry(horse).CurrentValues.SetValues(entryHorse);
+    //}
 }

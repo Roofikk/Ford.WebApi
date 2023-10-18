@@ -4,6 +4,6 @@ namespace Ford.WebApi.Repositories
 {
     public interface IHorseRepository : IRepository<Horse, long>
     {
-        //Task<Horse> AddUsers(IEnumerable<User> users);
+        //Task<bool> AddUser(string userId, Horse horse);
     }
 }
