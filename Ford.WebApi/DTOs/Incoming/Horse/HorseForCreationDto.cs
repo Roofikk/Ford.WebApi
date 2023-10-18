@@ -8,5 +8,5 @@ public class HorseForCreationDto
     public string? City { get; set; }
     public string? Region { get; set; }
     public string? Country { get; set; }
-    public IEnumerable<Models.User>? Users { get; set; }
+    public IEnumerable<string>? UserIds { get; set; }
 }

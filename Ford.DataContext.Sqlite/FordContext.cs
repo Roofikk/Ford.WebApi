@@ -31,6 +31,11 @@ public partial class FordContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.Property(e => e.UserId).ValueGeneratedNever();
+        });
+
         modelBuilder.Entity<Horse>(entity =>
         {
             entity.Property(e => e.HorseId).ValueGeneratedOnAdd();
@@ -66,11 +71,6 @@ public partial class FordContext : DbContext
                 .WithMany(p => p.SaveBones)
                 .HasForeignKey(d => d.SaveId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
-        });
-
-        modelBuilder.Entity<User>(entity =>
-        {
-            entity.Property(e => e.UserId).ValueGeneratedNever();
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -120,6 +120,9 @@ public class UserProfiles : Profile
                 opt => opt.MapFrom(src => src.CreationDate))
             .ForMember(
                 dest => dest.LastUpdatedDate,
-                opt => opt.MapFrom(src => src.LastUpdatedDate));
+                opt => opt.MapFrom(src => src.LastUpdatedDate))
+            .ForMember(
+                dest => dest.Horses,
+                opt => opt.MapFrom(src => src.Horses));
     }
 }
