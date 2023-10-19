@@ -14,5 +14,4 @@ public class UserGettingDto
     public DateTime? BirthDate { get; set; }
     public DateTime CreationDate { get; set; }
     public DateTime LastUpdatedDate { get; set; }
-    public ICollection<Models.Horse> Horses { get; set; }
 }

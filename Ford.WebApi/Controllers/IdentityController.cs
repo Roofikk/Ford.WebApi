@@ -66,13 +66,13 @@ public class IdentityController : ControllerBase
         var audience = configuration["Jwt:Audience"];
         var key = Encoding.ASCII.GetBytes(configuration["Jwt:Key"]);
 
-        var claims = new List<Claim>
+        List<Claim> claims = new List<Claim>
         {
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new (JwtRegisteredClaimNames.Sub, request.UserId),
-            new (JwtRegisteredClaimNames.Email, request.Email ?? ""),
-            new ("login", request.Login),
-            new ("userid", request.UserId)
+            new (ClaimTypes.Email, request.Email ?? ""),
+            new (ClaimTypes.Name, request.Login),
+            new (ClaimTypes.Role, request.Role)
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor
@@ -82,7 +82,7 @@ public class IdentityController : ControllerBase
             Expires = DateTime.UtcNow.Add(tokenLifeTime),
             Issuer = issuer,
             Audience = audience,
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature)
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -90,6 +90,13 @@ public class IdentityController : ControllerBase
 
         // should encrypt this token and after return to user
         return Ok(jwtToken);
+    }
+
+    public static List<Claim> DecodeToken()
+    {
+
+
+        return new List<Claim>();
     }
 
     [Authorize]

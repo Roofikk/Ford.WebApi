@@ -18,6 +18,8 @@ namespace Ford.Models
         public string UserId { get; set; }
         [Column(TypeName = "nvarchar(20)")]
         public string Login { get; set; } = null!;
+        [Column(TypeName = "nvarchar(8)")]
+        public string Role { get; set; }
         [Column(TypeName = "nvarchar(32)")]
         public string Password { get; set; } = null!;
         [Column(TypeName = "nvarchar(128)")]

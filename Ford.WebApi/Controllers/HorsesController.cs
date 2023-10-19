@@ -2,10 +2,9 @@
 using Ford.DataContext.Sqlite;
 using Ford.Models;
 using Ford.WebApi.Dtos.Horse;
-using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
+using System.Runtime.CompilerServices;
 
 namespace Ford.WebApi.Controllers
 {
@@ -100,34 +99,65 @@ namespace Ford.WebApi.Controllers
             return Created($"api/[controller]?horseId={horseRetrievingDto.HorseId}", horseRetrievingDto);
         }
 
+        [HttpPost]
+        [Route("{horseId}/{userId}")]
+        public async Task<ActionResult<Horse>> AddUser(long horseId, string userId)
+        {
+            IQueryable<Horse> query = db.Horses.Include(h => h.Users);
+            Horse? horse = await query.FirstOrDefaultAsync(h => h.HorseId == horseId);
+            User? user = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+
+            if (horse is not null && user is not null)
+            {
+                horse.Users.Add(user);
+                int result = await db.SaveChangesAsync();
+
+                if (result == 1)
+                {
+                    HorseRetrievingDto horseDto = mapper.Map<HorseRetrievingDto>(horse);
+                    return Ok(horseDto);
+                }
+                else
+                {
+                    return BadRequest();
+                }
+            }
+            else
+            {
+                return NotFound();
+            }
+        }
+
         [HttpPut]
         public async Task<ActionResult<Horse>> Update([FromBody]HorseForUpdateDto horse)
         {
             Horse? entity = await db.Horses.FirstOrDefaultAsync(h => h.HorseId == horse.HorseId);
+            Horse horseDto = mapper.Map<Horse>(horse);
 
             if (entity is null)
             {
                 return NotFound();
             }
 
-            Horse horseDto = mapper.Map<Horse>(horse);
-            db.Entry(entity).CurrentValues.SetValues(horse);
+            horseDto.CreationDate = entity.CreationDate;
+            db.Entry(entity).CurrentValues.SetValues(horseDto);
             return Ok(entity);
         }
 
-        //[HttpDelete]
-        //public async Task<ActionResult> Delete(long id)
-        //{
-        //    bool result = await db.DeleteAsync(id);
+        [HttpDelete]
+        public async Task<ActionResult> Delete(long id)
+        {
+            Horse? horse = await db.Horses.FirstOrDefaultAsync(h => h.Equals(id));
 
-        //    if (result)
-        //    {
-        //        return Ok();
-        //    }
-        //    else
-        //    {
-        //        return NotFound();
-        //    }
-        //}
+            if (horse is not null)
+            {
+                db.Remove(horse);
+                return Ok();
+            }
+            else
+            {
+                return NotFound();
+            }
+        }
     }
 }
