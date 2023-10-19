@@ -10,7 +10,7 @@ namespace Ford.Models
     {
         public User()
         {
-            Horses = new HashSet<Horse>();
+            HorseOwners = new HashSet<HorseOwner>();
         }
 
         [Key]
@@ -21,7 +21,7 @@ namespace Ford.Models
         [Column(TypeName = "nvarchar(8)")]
         public string Role { get; set; }
         [Column(TypeName = "nvarchar(32)")]
-        public string Password { get; set; } = null!;
+        public string PasswordHash { get; set; } = null!;
         [Column(TypeName = "nvarchar(128)")]
         public string? Email { get; set; }
         [Column(TypeName = "nvarchar(20)")]
@@ -43,8 +43,7 @@ namespace Ford.Models
         [Column(TypeName = "datetime")]
         public DateTime LastUpdatedDate { get; set; }
 
-        [ForeignKey("UserId")]
-        [InverseProperty("Users")]
-        public virtual ICollection<Horse> Horses { get; set; }
+        [InverseProperty("User")]
+        public virtual ICollection<HorseOwner> HorseOwners { get; set; }
     }
 }

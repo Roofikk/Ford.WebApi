@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Ford.DataContext.Sqlite;
 using Ford.Models;
 using Ford.WebApi.Dtos.Horse;
 using System.Collections.ObjectModel;
@@ -40,7 +39,21 @@ namespace Ford.WebApi.Profiles
                     opt => opt.MapFrom(src => src.Saves))
                 .ForMember(
                     dest => dest.Users,
-                    opt => opt.MapFrom(src => src.Users));
+                    opt => opt.MapFrom(src => src.HorseOwners));
+
+            CreateMap<HorseOwner, HorseUserDto>()
+                .ForMember(
+                    dest => dest.Id,
+                    opt => opt.MapFrom(src => src.UserId))
+                .ForMember(
+                    dest => dest.Login,
+                    opt => opt.MapFrom(src => src.User.Login))
+                .ForMember(
+                    dest => dest.Name,
+                    opt => opt.MapFrom(src => src.User.Name))
+                .ForMember(
+                    dest => dest.LastName,
+                    opt => opt.MapFrom(src => src.User.LastName));
 
             CreateMap<User, HorseUserDto>()
                 .ForMember(
@@ -76,8 +89,8 @@ namespace Ford.WebApi.Profiles
                     dest => dest.Country,
                     opt => opt.MapFrom(src => src.Country))
                 .ForMember(
-                    dest => dest.Users,
-                    opt => opt.MapFrom(src => new Collection<User>()))
+                    dest => dest.HorseOwners,
+                    opt => opt.MapFrom(src => src.HorseOwners))
                 .ForMember(
                     dest => dest.CreationDate,
                     opt => opt.MapFrom(src => DateTime.Now));

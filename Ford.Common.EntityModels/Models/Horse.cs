@@ -11,7 +11,7 @@ namespace Ford.Models
         public Horse()
         {
             Saves = new HashSet<Save>();
-            Users = new HashSet<User>();
+            HorseOwners = new HashSet<HorseOwner>();
         }
 
         [Key]
@@ -35,9 +35,8 @@ namespace Ford.Models
         [InverseProperty("Horse")]
         public virtual ICollection<Save> Saves { get; set; }
 
-        [ForeignKey("HorseId")]
-        [InverseProperty("Horses")]
-        public virtual ICollection<User> Users { get; set; }
+        [InverseProperty("Horse")]
+        public virtual ICollection<HorseOwner> HorseOwners { get; set; }
     }
 
     public enum Sex

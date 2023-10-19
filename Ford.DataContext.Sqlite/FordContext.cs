@@ -39,23 +39,26 @@ public partial class FordContext : DbContext
         modelBuilder.Entity<Horse>(entity =>
         {
             entity.Property(e => e.HorseId).ValueGeneratedOnAdd();
+        });
 
-            entity.HasMany(d => d.Users)
-                .WithMany(p => p.Horses)
-                .UsingEntity<Dictionary<string, object>>(
-                    "HorseOwner",
-                    l => l.HasOne<User>().WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.ClientSetNull),
-                    r => r.HasOne<Horse>().WithMany().HasForeignKey("HorseId").OnDelete(DeleteBehavior.ClientSetNull),
-                    j =>
-                    {
-                        j.HasKey("HorseId", "UserId");
-                        j.ToTable("HorseOwners");
-                    });
+        modelBuilder.Entity<HorseOwner>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.HorseId, });
+
+            entity.HasOne(d => d.User)
+                .WithMany(p => p.HorseOwners)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Horse)
+                .WithMany(p => p.HorseOwners)
+                .HasForeignKey(d => d.HorseId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Save>(entity =>
         {
-            entity.Property(e => e.SaveId).ValueGeneratedNever();
+            entity.Property(e => e.SaveId).ValueGeneratedOnAdd();
         });
 
         modelBuilder.Entity<SaveBone>(entity =>
