@@ -1,7 +1,8 @@
 ﻿using AutoMapper;
+using Ford.EntityModels.Models;
 using Ford.DataContext.Sqlite;
-using Ford.Models;
-using Ford.WebApi.Dtos.Horse;
+using Ford.WebApi.DTOs.Incoming.Horse;
+using Ford.WebApi.DTOs.Outgoing.Horse;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.CompilerServices;

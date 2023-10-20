@@ -1,4 +1,4 @@
-﻿using Ford.Models;
+﻿using Ford.EntityModels.Models;
 
 namespace Ford.WebApi.Repositories
 {

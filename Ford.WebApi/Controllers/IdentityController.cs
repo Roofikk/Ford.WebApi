@@ -5,6 +5,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Ford.EntityModels.Models;
+using Ford.WebApi.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace Ford.WebApi.Controllers;
 
@@ -23,40 +27,54 @@ public class IdentityController : ControllerBase
         this.configuration = configuration;
     }
 
-    //[HttpPost("auth")]
-    //public async Task<IActionResult> Registration([FromBody] User user)
-    //{
-    //    if (user is null)
-    //    {
-    //        return BadRequest("User is null");
-    //    }
+    [HttpPost("auth")]
+    public async Task<IActionResult> SignUp([FromBody]UserSignUp user)
+    {
+        if (user is null)
+        {
+            return BadRequest("User is null");
+        }
 
-    //    if (string.IsNullOrEmpty(user.Login) || string.IsNullOrEmpty(user.Password))
-    //    {
-    //        return BadRequest("Login or password can not be empty");
-    //    }
+        User? existingUser = await db.Users.FirstOrDefaultAsync(u => u.Login == user.Login);
 
-    //    User? existingUser = db.Users.FirstOrDefault(u => u.Login == user.Login);
+        if (existingUser is not null)
+        {
+            return Conflict();
+        }
 
-    //    if (existingUser is not null)
-    //    {
-    //        return Conflict($"User with {user.Login} login is existing");
-    //    }
+        RandomNumberGenerator rng = RandomNumberGenerator.Create();
+        byte[] saltBytes = new byte[16];
+        rng.GetBytes(saltBytes);
+        string salt = System.Convert.ToBase64String(saltBytes);
 
-    //    user.UserId = Guid.NewGuid().ToString();
+        db.Users.Add(new User
+        {
+            UserId = Guid.NewGuid().ToString(),
+            Login = user.Login,
+            Salt = salt,
+            HashedPassword = BCrypt.Net.BCrypt.HashPassword(user.Password, salt),
+            Name = user.Name,
+            Email = user.Email
+        });
 
-    //    db.Users.Add(user);
-    //    db.SaveChanges();
-
-    //    return Ok();
-    //}
+        if ((await db.SaveChangesAsync()) == 1)
+        {
+            return Ok();
+        }
+        else
+        {
+            return BadRequest();
+        }
+    }
 
     // check success existing user hash and get secret encrypting token
     // user should decrypt token on our local machine
     [HttpPost("token")]
-    public IActionResult GetToken([FromBody]TokenGenerationRequest request)
+    public async Task<ActionResult<string>> SignIn([FromBody]UserSignIn request)
     {
-        if (db.Users.SingleOrDefault(u => u.UserId == request.UserId) is null)
+        User? user = await db.Users.SingleOrDefaultAsync(u => u.Login == request.Login);
+
+        if (user is null)
         {
             return NotFound("User not found");
         }
@@ -69,10 +87,10 @@ public class IdentityController : ControllerBase
         List<Claim> claims = new List<Claim>
         {
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new (JwtRegisteredClaimNames.Sub, request.UserId),
-            new (ClaimTypes.Email, request.Email ?? ""),
-            new (ClaimTypes.Name, request.Login),
-            new (ClaimTypes.Role, request.Role)
+            new (JwtRegisteredClaimNames.Sub, user.UserId),
+            new (ClaimTypes.Email, user.Email ?? ""),
+            new (ClaimTypes.Name, user.Login),
+            new (ClaimTypes.Role, user.Role)
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor
