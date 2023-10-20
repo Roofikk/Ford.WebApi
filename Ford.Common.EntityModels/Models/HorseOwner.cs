@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Ford.Common.EntityModels.Models
+namespace Ford.EntityModels.Models
 {
     public partial class HorseOwner
     {

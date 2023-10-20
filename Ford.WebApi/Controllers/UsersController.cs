@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Ford.Common.EntityModels.Models;
+using Ford.EntityModels.Models;
 using Ford.WebApi.DTOs.Incoming.User;
 using Ford.WebApi.DTOs.Outgoing.User;
 using Ford.WebApi.Repositories;

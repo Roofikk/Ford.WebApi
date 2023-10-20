@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Ford.Common.EntityModels.Models
+namespace Ford.EntityModels.Models
 {
     public partial class User
     {
@@ -18,10 +18,12 @@ namespace Ford.Common.EntityModels.Models
         public string UserId { get; set; }
         [Column(TypeName = "nvarchar(20)")]
         public string Login { get; set; } = null!;
+        [Column(TypeName = "nvarchar(16)")]
+        public string Salt { get; set; } = null!;
+        [Column(TypeName = "nvarchar(32)")]
+        public string HashedPassword { get; set; } = null!;
         [Column(TypeName = "nvarchar(8)")]
         public string Role { get; set; }
-        [Column(TypeName = "nvarchar(32)")]
-        public string PasswordHash { get; set; } = null!;
         [Column(TypeName = "nvarchar(128)")]
         public string? Email { get; set; }
         [Column(TypeName = "nvarchar(20)")]

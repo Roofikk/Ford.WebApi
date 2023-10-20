@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Ford.Common.EntityModels.Models;
+using Ford.EntityModels.Models;
 using Ford.DataContext.Sqlite;
 using Ford.WebApi.DTOs.Incoming.Horse;
 using Ford.WebApi.DTOs.Outgoing.Horse;
@@ -27,7 +27,7 @@ namespace Ford.WebApi.Controllers
         public IActionResult Get(string userId, long? horseId)
         {
             IQueryable<Horse> dbHorses = db.Horses.Include(h => h.Saves);
-            IEnumerable<Horse> horses = dbHorses.Where(h => h.Users.Any(u => u.UserId == userId));
+            IEnumerable<Horse> horses = dbHorses.Where(h => h.HorseOwners.Any(u => u.UserId == userId));
 
             if (horses.Any())
             {
@@ -52,7 +52,7 @@ namespace Ford.WebApi.Controllers
         [HttpGet]
         public async Task<IActionResult> Get(long? horseId)
         {
-            IQueryable<Horse> horsesDb = db.Horses.Include(h => h.Users).Include(h => h.Saves);
+            IQueryable<Horse> horsesDb = db.Horses.Include(h => h.HorseOwners).Include(h => h.Saves);
 
             if (horseId is not null)
             {
@@ -80,37 +80,46 @@ namespace Ford.WebApi.Controllers
         public async Task<ActionResult<Horse>> Create([FromBody] HorseForCreationDto horse)
         {
             Horse horseDto = mapper.Map<Horse>(horse);
+            IEnumerable<User> intersect = db.Users.IntersectBy(horse.HorseOwners.Select(e => e.UserId), e => e.UserId);
 
-            if (horse.UserIds is not null && horse.UserIds.Any())
+            if (intersect.Any() && intersect.Count() == horse.HorseOwners.Count())
             {
-                IEnumerable<User> users = db.Users.ToList().IntersectBy(horse.UserIds, u => u.UserId);
+                db.Horses.Add(horseDto);
 
-                if (users.Count() != horse.UserIds.Count())
+                foreach (var horseOwner in horse.HorseOwners)
+                {
+                    horseDto.HorseOwners.Add(horseOwner);
+                }
+
+                bool result = (await db.SaveChangesAsync()) == 1;
+
+                if (result)
+                {
+                    HorseRetrievingDto horseRetrievingDto = mapper.Map<HorseRetrievingDto>(horseDto);
+                    return Created($"api/[controller]?horseId={horseRetrievingDto.HorseId}", horseRetrievingDto);
+                }
+                else
                 {
                     return BadRequest();
                 }
-
-                horseDto.Users = users.ToList();
             }
-
-            db.Horses.Add(horseDto);
-            await db.SaveChangesAsync();
-
-            HorseRetrievingDto horseRetrievingDto = mapper.Map<HorseRetrievingDto>(horseDto);
-            return Created($"api/[controller]?horseId={horseRetrievingDto.HorseId}", horseRetrievingDto);
+            else
+            {
+                return NotFound();
+            }
         }
 
         [HttpPost]
-        [Route("{horseId}/{userId}")]
-        public async Task<ActionResult<Horse>> AddUser(long horseId, string userId)
+        [Route("addUser")]
+        public async Task<ActionResult<Horse>> AddUser([FromBody]HorseOwner horseOwner)
         {
-            IQueryable<Horse> query = db.Horses.Include(h => h.Users);
-            Horse? horse = await query.FirstOrDefaultAsync(h => h.HorseId == horseId);
-            User? user = await db.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+            IQueryable<Horse> query = db.Horses.Include(h => h.HorseOwners);
+            Horse? horse = await query.FirstOrDefaultAsync(h => h.HorseId == horseOwner.HorseId);
+            User? user = await db.Users.FirstOrDefaultAsync(u => u.UserId == horseOwner.UserId);
 
             if (horse is not null && user is not null)
             {
-                horse.Users.Add(user);
+                horse.HorseOwners.Add(horseOwner);
                 int result = await db.SaveChangesAsync();
 
                 if (result == 1)

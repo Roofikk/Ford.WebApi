@@ -1,4 +1,4 @@
-﻿using Ford.Common.EntityModels.Models;
+﻿using Ford.EntityModels.Models;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 

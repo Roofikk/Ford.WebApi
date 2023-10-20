@@ -1,4 +1,4 @@
-﻿using Ford.Common.EntityModels.Models;
+﻿using Ford.EntityModels.Models;
 using Ford.DataContext.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;

@@ -1,4 +1,4 @@
-﻿using Ford.Common.EntityModels.Models;
+﻿using Ford.EntityModels.Models;
 using Ford.DataContext.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,17 +25,17 @@ public class HorseRepository : IHorseRepository
         return horse;
     }
 
-    public async Task<Horse?> CreateAsync(Horse entity)
+    public Task<Horse?> CreateAsync(Horse entity)
     {
-        IEnumerable<User> find =  db.Users.Intersect(entity.Users);
+        //IEnumerable<User> find =  db.Users.Intersect(entity.HorseOwners);
 
-        if (find.Count() != entity.Users.Count)
-        {
-            return null;
-        }
+        //if (find.Count() != entity.HorseOwners.Count)
+        //{
+        //    return null;
+        //}
 
-        await db.Horses.AddAsync(entity);
-        return entity;
+        //await db.Horses.AddAsync(entity);
+        return null;
     }
 
     public async Task<Horse?> UpdateAsync(Horse entity)

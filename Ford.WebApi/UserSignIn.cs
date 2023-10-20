@@ -2,10 +2,9 @@
 
 namespace Ford.WebApi;
 
-public class TokenGenerationRequest
+public class UserSignIn
 {
-    public string UserId { get; set; } = null!;
     public string Login { get; set; } = null!;
-    public string Role { get; set; } = null!;
+    public string Password { get; set; } = null!;
     public string? Email { get; set; }
 }
