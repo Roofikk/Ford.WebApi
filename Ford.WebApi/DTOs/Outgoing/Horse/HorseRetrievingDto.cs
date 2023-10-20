@@ -1,13 +1,13 @@
-﻿using Ford.Models;
+﻿using Ford.Common.EntityModels.Models;
 
-namespace Ford.WebApi.Dtos.Horse
+namespace Ford.WebApi.DTOs.Outgoing.Horse
 {
     public class HorseRetrievingDto
     {
         public long HorseId { get; set; }
         public string Name { get; set; } = null!;
         public DateTime? BirthDate { get; set; }
-        public string Sex { get; set; } = Models.Sex.None.ToString();
+        public string Sex { get; set; } = Common.EntityModels.Models.Sex.None.ToString();
         public string? City { get; set; }
         public string? Region { get; set; }
         public string? Country { get; set; }

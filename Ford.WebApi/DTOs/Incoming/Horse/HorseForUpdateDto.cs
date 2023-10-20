@@ -1,4 +1,4 @@
-﻿namespace Ford.WebApi.Dtos.Horse;
+﻿namespace Ford.WebApi.DTOs.Incoming.Horse;
 
 public class HorseForUpdateDto
 {

@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
-using Ford.Models;
-using Ford.WebApi.Dtos.User;
+using Ford.Common.EntityModels.Models;
+using Ford.WebApi.DTOs.Incoming.User;
+using Ford.WebApi.DTOs.Outgoing.User;
 using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Mvc;
 

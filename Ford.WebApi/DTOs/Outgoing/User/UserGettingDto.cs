@@ -1,10 +1,9 @@
-﻿namespace Ford.WebApi.Dtos.User;
+﻿namespace Ford.WebApi.DTOs.Outgoing.User;
 
 public class UserGettingDto
 {
     public string UserId { get; set; } = null!;
     public string Login { get; set; } = null!;
-    public string Role { get; set; } = null!;
     public string? Email { get; set; }
     public string Name { get; set; } = null!;
     public string? LastName { get; set; }

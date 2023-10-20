@@ -1,8 +1,8 @@
-﻿using Ford.Models;
+﻿using Ford.Common.EntityModels.Models;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace Ford.WebApi.Dtos.User;
+namespace Ford.WebApi.DTOs.Incoming.User;
 
 public class UserCreationDto
 {

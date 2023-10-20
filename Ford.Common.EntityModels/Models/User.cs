@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Ford.Models
+namespace Ford.Common.EntityModels.Models
 {
     public partial class User
     {

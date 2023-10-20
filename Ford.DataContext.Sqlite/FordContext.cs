@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Ford.Models;
+using Ford.Common.EntityModels.Models;
 
 namespace Ford.DataContext.Sqlite;
 

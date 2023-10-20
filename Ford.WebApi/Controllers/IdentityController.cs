@@ -1,6 +1,9 @@
-﻿using Ford.DataContext.Sqlite;
+﻿using Ford.Common.EntityModels.Models;
+using Ford.DataContext.Sqlite;
+using Ford.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -23,33 +26,39 @@ public class IdentityController : ControllerBase
         this.configuration = configuration;
     }
 
-    //[HttpPost("auth")]
-    //public async Task<IActionResult> Registration([FromBody] User user)
-    //{
-    //    if (user is null)
-    //    {
-    //        return BadRequest("User is null");
-    //    }
+    [HttpPost("auth")]
+    public async Task<IActionResult> Registration([FromBody]RegistrationUser user)
+    {
+        if (user is null)
+        {
+            return BadRequest("User is null");
+        }
 
-    //    if (string.IsNullOrEmpty(user.Login) || string.IsNullOrEmpty(user.Password))
-    //    {
-    //        return BadRequest("Login or password can not be empty");
-    //    }
+        if (string.IsNullOrEmpty(user.Login) || string.IsNullOrEmpty(user.Password))
+        {
+            return BadRequest("Login or password can not be empty");
+        }
 
-    //    User? existingUser = db.Users.FirstOrDefault(u => u.Login == user.Login);
+        User? existingUser = await db.Users.FirstOrDefaultAsync(u => u.Login == user.Login);
 
-    //    if (existingUser is not null)
-    //    {
-    //        return Conflict($"User with {user.Login} login is existing");
-    //    }
+        if (existingUser is not null)
+        {
+            return Conflict($"User with {user.Login} login is existing");
+        }
 
-    //    user.UserId = Guid.NewGuid().ToString();
+        db.Users.Add(new User
+        {
+            Name = user.Name,
+            Email = user.Email,
+            PasswordHash = user.Password, // EDIT!!!
+            Role = "User",
+            UserId = Guid.NewGuid().ToString(),
+            CreationDate = DateTime.Now
+        });
+        db.SaveChanges();
 
-    //    db.Users.Add(user);
-    //    db.SaveChanges();
-
-    //    return Ok();
-    //}
+        return Ok();
+    }
 
     // check success existing user hash and get secret encrypting token
     // user should decrypt token on our local machine

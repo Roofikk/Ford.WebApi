@@ -1,5 +1,5 @@
+using Ford.Common.EntityModels.Models;
 using Ford.DataContext.Sqlite;
-using Ford.Models;
 using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
