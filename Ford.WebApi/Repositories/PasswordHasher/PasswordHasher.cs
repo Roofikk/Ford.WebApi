@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
 
-namespace Ford.WebApi.Repositories.PasswordHasher;
+namespace Ford.WebApi.PasswordHasher;
 
 public class PasswordHasher : IPasswordHasher
 {

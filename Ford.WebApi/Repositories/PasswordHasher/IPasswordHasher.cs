@@ -1,4 +1,4 @@
-﻿namespace Ford.WebApi.Repositories.PasswordHasher
+﻿namespace Ford.WebApi.PasswordHasher
 {
     public interface IPasswordHasher
     {

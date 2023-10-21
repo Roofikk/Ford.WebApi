@@ -9,7 +9,7 @@ using Ford.EntityModels.Models;
 using Ford.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
-using Ford.WebApi.Repositories.PasswordHasher;
+using Ford.WebApi.PasswordHasher;
 
 namespace Ford.WebApi.Controllers;
 

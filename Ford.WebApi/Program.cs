@@ -7,7 +7,7 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
 using System.Text;
 using System.Text.Json.Serialization;
-using Ford.WebApi.Repositories.PasswordHasher;
+using Ford.WebApi.PasswordHasher;
 
 var builder = WebApplication.CreateBuilder(args);
 
