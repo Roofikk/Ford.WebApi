@@ -1,6 +1,6 @@
 ﻿using Ford.EntityModels.Models;
 
-namespace Ford.WebApi.DTOs.Incoming.Horse;
+namespace Ford.WebApi.Dtos.Horse;
 
 public class HorseForCreationDto
 {

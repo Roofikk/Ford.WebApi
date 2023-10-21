@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 
-namespace Ford.WebApi;
+namespace Ford.WebApi.Models;
 
 public class UserSignIn
 {

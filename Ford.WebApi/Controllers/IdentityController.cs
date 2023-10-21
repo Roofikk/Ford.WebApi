@@ -9,6 +9,7 @@ using Ford.EntityModels.Models;
 using Ford.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
+using Ford.WebApi.Repositories.PasswordHasher;
 
 namespace Ford.WebApi.Controllers;
 
@@ -18,13 +19,15 @@ public class IdentityController : ControllerBase
 {
     private readonly FordContext db;
     private readonly IConfiguration configuration;
+    private readonly IPasswordHasher passwordHasher;
 
     private static readonly TimeSpan tokenLifeTime = TimeSpan.FromHours(2);
 
-    public IdentityController(FordContext db, IConfiguration configuration)
+    public IdentityController(FordContext db, IConfiguration configuration, IPasswordHasher passwordHasher)
     {
         this.db = db;
         this.configuration = configuration;
+        this.passwordHasher = passwordHasher;
     }
 
     [HttpPost("auth")]
@@ -45,14 +48,14 @@ public class IdentityController : ControllerBase
         RandomNumberGenerator rng = RandomNumberGenerator.Create();
         byte[] saltBytes = new byte[16];
         rng.GetBytes(saltBytes);
-        string salt = System.Convert.ToBase64String(saltBytes);
+        string salt = Convert.ToBase64String(saltBytes);
 
         db.Users.Add(new User
         {
             UserId = Guid.NewGuid().ToString(),
             Login = user.Login,
             Salt = salt,
-            HashedPassword = BCrypt.Net.BCrypt.HashPassword(user.Password, salt),
+            HashedPassword = passwordHasher.Hash(user.Password),
             Name = user.Name,
             Email = user.Email
         });
@@ -77,6 +80,11 @@ public class IdentityController : ControllerBase
         if (user is null)
         {
             return NotFound("User not found");
+        }
+
+        if (!passwordHasher.Verify(user.HashedPassword, request.Password))
+        {
+            return Unauthorized();
         }
 
         var tokenHandler = new JwtSecurityTokenHandler();
@@ -108,13 +116,6 @@ public class IdentityController : ControllerBase
 
         // should encrypt this token and after return to user
         return Ok(jwtToken);
-    }
-
-    public static List<Claim> DecodeToken()
-    {
-
-
-        return new List<Claim>();
     }
 
     [Authorize]

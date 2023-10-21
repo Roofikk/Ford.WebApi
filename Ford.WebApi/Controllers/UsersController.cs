@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Ford.EntityModels.Models;
-using Ford.WebApi.DTOs.Incoming.User;
-using Ford.WebApi.DTOs.Outgoing.User;
+using Ford.WebApi.Dtos.User;
 using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,7 +41,7 @@ public class UsersController : ControllerBase
         }
         else
         {
-            IEnumerable<User> users = await db.RetrieveAllAsync();
+            IEnumerable<User>? users = await db.RetrieveAllAsync();
             return Ok(mapper.Map<IEnumerable<UserGettingDto>>(users));
         }
     }

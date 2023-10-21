@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Ford.EntityModels.Models;
-using Ford.WebApi.DTOs.Incoming.User;
-using Ford.WebApi.DTOs.Outgoing.User;
+using Ford.WebApi.Dtos.User;
 
 namespace Ford.WebApi.Profiles;
 
@@ -92,9 +91,6 @@ public class UserProfiles : Profile
             .ForMember(
                 dest => dest.Login,
                 opt => opt.MapFrom(src => src.Login))
-            .ForMember(
-                dest => dest.Role,
-                opt => opt.MapFrom(src => src.Role))
             .ForMember(
                 dest => dest.Email,
                 opt => opt.MapFrom(src => src.Email))

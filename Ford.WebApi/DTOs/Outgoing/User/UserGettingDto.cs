@@ -1,4 +1,4 @@
-﻿namespace Ford.WebApi.DTOs.Outgoing.User;
+﻿namespace Ford.WebApi.Dtos.User;
 
 public class UserGettingDto
 {

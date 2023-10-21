@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace Ford.WebApi.DTOs.Incoming.User;
+namespace Ford.WebApi.Dtos.User;
 
 public class UserForUpdateDto
 {

@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Ford.EntityModels.Models;
-using Ford.WebApi.DTOs.Incoming.Horse;
-using Ford.WebApi.DTOs.Outgoing.Horse;
+using Ford.WebApi.Dtos.Horse;
 using System.Collections.ObjectModel;
 
 namespace Ford.WebApi.Profiles;
