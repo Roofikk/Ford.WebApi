@@ -25,9 +25,6 @@ public class UserProfiles : Profile
                 dest => dest.LastName,
                 opt => opt.MapFrom(src => src.LastName))
             .ForMember(
-                dest => dest.Phone,
-                opt => opt.MapFrom(src => src.Phone))
-            .ForMember(
                 dest => dest.City,
                 opt => opt.MapFrom(src => src.City))
             .ForMember(
@@ -60,9 +57,6 @@ public class UserProfiles : Profile
                 dest => dest.LastName,
                 opt => opt.MapFrom(src => src.LastName))
             .ForMember(
-                dest => dest.Phone,
-                opt => opt.MapFrom(src => src.Phone))
-            .ForMember(
                 dest => dest.City,
                 opt => opt.MapFrom(src => src.City))
             .ForMember(
@@ -94,9 +88,6 @@ public class UserProfiles : Profile
             .ForMember(
                 dest => dest.LastName,
                 opt => opt.MapFrom(src => src.LastName))
-            .ForMember(
-                dest => dest.Phone,
-                opt => opt.MapFrom(src => src.Phone))
             .ForMember(
                 dest => dest.City,
                 opt => opt.MapFrom(src => src.City))

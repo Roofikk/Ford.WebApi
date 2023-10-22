@@ -1,7 +1,7 @@
 ﻿using Ford.WebApi.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace Ford.DataContext.Sqlite;
+namespace Ford.WebApi.Extensions;
 
 public static class FordContextExtensions
 {

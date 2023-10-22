@@ -13,6 +13,7 @@ using Ford.WebApi.Dtos.User;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using System.Data.Entity;
+using System.Globalization;
 
 namespace Ford.WebApi.Controllers;
 
@@ -51,7 +52,9 @@ public class IdentityController : ControllerBase
             FirstName = request.FirstName,
             LastName = request.LastName,
             Email = request.Email,
-            BirthDate = request.BirthDate
+            BirthDate = request.BirthDate,
+            CreationDate = DateTime.Now,
+            LastUpdatedDate = DateTime.Now
         };
         var result = await userManager.CreateAsync(user, request.Password);
 
@@ -104,7 +107,7 @@ public class IdentityController : ControllerBase
             return Unauthorized();
         }
 
-        var user = db.Users.FirstOrDefault(u => u.UserName == request.Login);
+        User? user = db.Users.FirstOrDefault(u => u.UserName == request.Login);
 
         if (user is null)
         {
@@ -124,20 +127,20 @@ public class IdentityController : ControllerBase
         List<Claim> claims = new List<Claim>
         {
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new (JwtRegisteredClaimNames.Sub, managedUser.Id.ToString()),
-            new (ClaimTypes.Email, managedUser.Email ?? ""),
+            new (JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
+            new (ClaimTypes.NameIdentifier, managedUser.Id.ToString()),
+            new (ClaimTypes.Email, managedUser.Email!),
             new (ClaimTypes.Name, managedUser.UserName),
-            new (ClaimTypes.Role, string.Join(" ", roles.Select(r => r.Name)))
+            new (ClaimTypes.Role, string.Join(",", roles.Select(r => r.Name)))
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-
             Expires = DateTime.UtcNow.Add(tokenLifeTime),
             Issuer = issuer,
             Audience = audience,
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature)
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);

@@ -1,4 +1,3 @@
-using Ford.DataContext.Sqlite;
 using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -11,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
+using Ford.WebApi.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 

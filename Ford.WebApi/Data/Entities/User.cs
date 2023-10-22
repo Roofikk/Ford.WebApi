@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Identity;
 
 namespace Ford.WebApi.Data.Entities
@@ -15,8 +14,6 @@ namespace Ford.WebApi.Data.Entities
         public string FirstName { get; set; }
         [Column(TypeName = "nvarchar(20)")]
         public string? LastName { get; set; }
-        [Column(TypeName = "nvarchar(24)")]
-        public string? Phone { get; set; }
         [Column(TypeName = "nvarchar(25)")]
         public string? City { get; set; }
         [Column(TypeName = "nvarchar(25)")]
