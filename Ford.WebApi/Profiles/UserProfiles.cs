@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Ford.EntityModels.Models;
+using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.User;
 
 namespace Ford.WebApi.Profiles;
@@ -10,19 +10,16 @@ public class UserProfiles : Profile
     {
         CreateMap<UserCreationDto, User>()
             .ForMember(
-                dest => dest.UserId,
+                dest => dest.Id,
                 opt => opt.MapFrom(src => Guid.NewGuid().ToString()))
             .ForMember(
-                dest => dest.Login,
+                dest => dest.UserName,
                 opt => opt.MapFrom(src => src.Login))
-            .ForMember(
-                dest => dest.HashedPassword,
-                opt => opt.MapFrom(src => src.Password))
             .ForMember(
                 dest => dest.Email,
                 opt => opt.MapFrom(src => src.Email))
             .ForMember(
-                dest => dest.Name,
+                dest => dest.FirstName,
                 opt => opt.MapFrom(src => src.Name))
             .ForMember(
                 dest => dest.LastName,
@@ -51,17 +48,14 @@ public class UserProfiles : Profile
 
         CreateMap<UserForUpdateDto, User>()
             .ForMember(
-                dest => dest.UserId,
-                opt => opt.MapFrom(src => src.UserId))
-            .ForMember(
-                dest => dest.HashedPassword,
-                opt => opt.MapFrom(src => src.Password))
+                dest => dest.Id,
+                opt => opt.MapFrom(src => Guid.Parse(src.Id)))
             .ForMember(
                 dest => dest.Email,
                 opt => opt.MapFrom(src => src.Email))
             .ForMember(
-                dest => dest.Name,
-                opt => opt.MapFrom(src => src.Name))
+                dest => dest.FirstName,
+                opt => opt.MapFrom(src => src.FirstName))
             .ForMember(
                 dest => dest.LastName,
                 opt => opt.MapFrom(src => src.LastName))
@@ -87,16 +81,16 @@ public class UserProfiles : Profile
         CreateMap<User, UserGettingDto>()
             .ForMember(
                 dest => dest.UserId,
-                opt => opt.MapFrom(src => src.UserId))
+                opt => opt.MapFrom(src => src.Id))
             .ForMember(
                 dest => dest.Login,
-                opt => opt.MapFrom(src => src.Login))
+                opt => opt.MapFrom(src => src.UserName))
             .ForMember(
                 dest => dest.Email,
                 opt => opt.MapFrom(src => src.Email))
             .ForMember(
-                dest => dest.Name,
-                opt => opt.MapFrom(src => src.Name))
+                dest => dest.FirstName,
+                opt => opt.MapFrom(src => src.FirstName))
             .ForMember(
                 dest => dest.LastName,
                 opt => opt.MapFrom(src => src.LastName))

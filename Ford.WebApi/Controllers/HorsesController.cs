@@ -1,9 +1,9 @@
 ﻿using AutoMapper;
-using Ford.EntityModels.Models;
-using Ford.DataContext.Sqlite;
 using Ford.WebApi.Dtos.Horse;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Ford.WebApi.Data.Entities;
+using Ford.WebApi.Data;
 
 namespace Ford.WebApi.Controllers
 {
@@ -25,7 +25,7 @@ namespace Ford.WebApi.Controllers
         public IActionResult Get(string userId, long? horseId)
         {
             IQueryable<Horse> dbHorses = db.Horses.Include(h => h.Saves);
-            IEnumerable<Horse> horses = dbHorses.Where(h => h.HorseOwners.Any(u => u.UserId == userId));
+            IEnumerable<Horse> horses = dbHorses.Where(h => h.HorseOwners.Any(u => u.UserId.ToString() == userId));
 
             if (horses.Any())
             {
@@ -74,38 +74,38 @@ namespace Ford.WebApi.Controllers
             }
         }
 
-        [HttpPost]
-        public async Task<ActionResult<Horse>> Create([FromBody]HorseForCreationDto horse)
-        {
-            Horse horseDto = mapper.Map<Horse>(horse);
-            IEnumerable<User> intersect = db.Users.IntersectBy(horse.HorseOwners.Select(e => e.UserId), e => e.UserId);
+        //[HttpPost]
+        //public async Task<ActionResult<Horse>> Create([FromBody]HorseForCreationDto horse)
+        //{
+        //    Horse horseDto = mapper.Map<Horse>(horse);
+        //    IEnumerable<User> intersect = db.Users.IntersectBy(horse.HorseOwners.Select(e => e.UserId), e => e.Id);
 
-            if (intersect.Any() && intersect.Count() == horse.HorseOwners.Count())
-            {
-                db.Horses.Add(horseDto);
+        //    if (intersect.Any() && intersect.Count() == horse.HorseOwners.Count())
+        //    {
+        //        db.Horses.Add(horseDto);
 
-                foreach (var horseOwner in horse.HorseOwners)
-                {
-                    horseDto.HorseOwners.Add(horseOwner);
-                }
+        //        foreach (var horseOwner in horse.HorseOwners)
+        //        {
+        //            horseDto.HorseOwners.Add(horseOwner);
+        //        }
 
-                bool result = (await db.SaveChangesAsync()) == 1;
+        //        bool result = (await db.SaveChangesAsync()) == 1;
 
-                if (result)
-                {
-                    HorseRetrievingDto horseRetrievingDto = mapper.Map<HorseRetrievingDto>(horseDto);
-                    return Created($"api/[controller]?horseId={horseRetrievingDto.HorseId}", horseRetrievingDto);
-                }
-                else
-                {
-                    return BadRequest();
-                }
-            }
-            else
-            {
-                return NotFound();
-            }
-        }
+        //        if (result)
+        //        {
+        //            HorseRetrievingDto horseRetrievingDto = mapper.Map<HorseRetrievingDto>(horseDto);
+        //            return Created($"api/[controller]?horseId={horseRetrievingDto.HorseId}", horseRetrievingDto);
+        //        }
+        //        else
+        //        {
+        //            return BadRequest();
+        //        }
+        //    }
+        //    else
+        //    {
+        //        return NotFound();
+        //    }
+        //}
 
         [HttpPost]
         [Route("addUser")]
@@ -113,7 +113,7 @@ namespace Ford.WebApi.Controllers
         {
             IQueryable<Horse> query = db.Horses.Include(h => h.HorseOwners);
             Horse? horse = await query.FirstOrDefaultAsync(h => h.HorseId == horseOwner.HorseId);
-            User? user = await db.Users.FirstOrDefaultAsync(u => u.UserId == horseOwner.UserId);
+            User? user = await db.Users.FirstOrDefaultAsync(u => u.Id == horseOwner.UserId);
 
             if (horse is not null && user is not null)
             {

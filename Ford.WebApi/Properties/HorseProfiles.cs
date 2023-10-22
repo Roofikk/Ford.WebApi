@@ -1,9 +1,9 @@
 ﻿using AutoMapper;
-using Ford.EntityModels.Models;
+using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.Horse;
 using System.Collections.ObjectModel;
 
-namespace Ford.WebApi.Profiles;
+namespace Ford.WebApi.Properties;
 
 public class HorseProfiles : Profile
 {
@@ -46,11 +46,11 @@ public class HorseProfiles : Profile
                 dest => dest.Id,
                 opt => opt.MapFrom(src => src.UserId))
             .ForMember(
-                dest => dest.Login,
-                opt => opt.MapFrom(src => src.User.Login))
+                dest => dest.Email,
+                opt => opt.MapFrom(src => src.User.UserName.ToString()))
             .ForMember(
                 dest => dest.Name,
-                opt => opt.MapFrom(src => src.User.Name))
+                opt => opt.MapFrom(src => src.User.FirstName))
             .ForMember(
                 dest => dest.LastName,
                 opt => opt.MapFrom(src => src.User.LastName));
@@ -58,16 +58,16 @@ public class HorseProfiles : Profile
         CreateMap<User, HorseUserDto>()
             .ForMember(
                 dest => dest.Id,
-                opt => opt.MapFrom(src => src.UserId))
+                opt => opt.MapFrom(src => src.Id.ToString()))
             .ForMember(
                 dest => dest.Name,
-                opt => opt.MapFrom(src => src.Name))
+                opt => opt.MapFrom(src => src.FirstName))
             .ForMember(
                 dest => dest.LastName,
                 opt => opt.MapFrom(src => src.LastName))
             .ForMember(
-                dest => dest.Login,
-                opt => opt.MapFrom(src => src.Login));
+                dest => dest.Email,
+                opt => opt.MapFrom(src => src.Email));
 
         CreateMap<HorseForCreationDto, Horse>()
             .ForMember(

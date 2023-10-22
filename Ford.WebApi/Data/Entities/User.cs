@@ -1,33 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
-namespace Ford.EntityModels.Models
+namespace Ford.WebApi.Data.Entities
 {
-    public partial class User
+    public partial class User : IdentityUser<long>
     {
         public User()
         {
             HorseOwners = new HashSet<HorseOwner>();
         }
 
-        [Key]
-        [Column(TypeName = "nvarchar(40)")]
-        public string UserId { get; set; }
         [Column(TypeName = "nvarchar(20)")]
-        public string Login { get; set; } = null!;
-        [Column(TypeName = "nvarchar(16)")]
-        public string Salt { get; set; } = null!;
-        [Column(TypeName = "nvarchar(32)")]
-        public string HashedPassword { get; set; } = null!;
-        [Column(TypeName = "nvarchar(8)")]
-        public string Role { get; set; }
-        [Column(TypeName = "nvarchar(128)")]
-        public string? Email { get; set; }
-        [Column(TypeName = "nvarchar(20)")]
-        public string Name { get; set; }
+        public string FirstName { get; set; }
         [Column(TypeName = "nvarchar(20)")]
         public string? LastName { get; set; }
         [Column(TypeName = "nvarchar(24)")]

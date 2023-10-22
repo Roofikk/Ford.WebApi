@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Ford.EntityModels.Models
+namespace Ford.WebApi.Data.Entities
 {
     public partial class HorseOwner
     {
@@ -9,11 +9,11 @@ namespace Ford.EntityModels.Models
         public long HorseId { get; set; }
         [Key]
         [Column(TypeName = "nvarchar(40)")]
-        public string UserId { get; set; } = null!;
+        public long UserId { get; set; }
         [Column(TypeName = "nvarchar(8)")]
         public string RuleAccess { get; set; } = null!;
 
-        [ForeignKey("UserId")]
+        [ForeignKey("Id")]
         [InverseProperty("HorseOwners")]
         public virtual User User { get; set; } = null!;
         [ForeignKey("HorseId")]

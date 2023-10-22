@@ -1,4 +1,4 @@
-﻿using Ford.EntityModels.Models;
+﻿using Ford.WebApi.Data.Entities;
 
 namespace Ford.WebApi.Dtos.Horse
 {
@@ -7,7 +7,7 @@ namespace Ford.WebApi.Dtos.Horse
         public long HorseId { get; set; }
         public string Name { get; set; } = null!;
         public DateTime? BirthDate { get; set; }
-        public string Sex { get; set; } = EntityModels.Models.Sex.None.ToString();
+        public string Sex { get; set; } = Data.Entities.Sex.None.ToString();
         public string? City { get; set; }
         public string? Region { get; set; }
         public string? Country { get; set; }
@@ -19,7 +19,7 @@ namespace Ford.WebApi.Dtos.Horse
     public class HorseUserDto
     {
         public string Id { get; set; } = null!;
-        public string Login { get; set; } = null!;
+        public string Email { get; set; } = null!;
         public string Name { get; set; } = null!;
         public string? LastName { get; set; }
     }

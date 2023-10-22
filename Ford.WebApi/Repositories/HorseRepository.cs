@@ -1,6 +1,6 @@
-﻿using Ford.EntityModels.Models;
-using Ford.DataContext.Sqlite;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Ford.WebApi.Data.Entities;
+using Ford.WebApi.Data;
 
 namespace Ford.WebApi.Repositories;
 

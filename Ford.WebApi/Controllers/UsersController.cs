@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Ford.EntityModels.Models;
+using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.User;
 using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -59,10 +59,16 @@ public class UsersController : ControllerBase
         }
         
         User? created = await db.CreateAsync(sourceUser);
+        
+        if (created is null)
+        {
+            return BadRequest();
+        }
+
         await db.SaveAsync();
 
         UserGettingDto responseUser = mapper.Map<UserGettingDto>(created);
-        return CreatedAtAction(nameof(Get), new { id = created.UserId }, responseUser);
+        return CreatedAtAction(nameof(Get), new { id = created.Id }, responseUser);
     }
 
     [HttpPut]
@@ -72,11 +78,6 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserGettingDto>> Update([FromBody]UserForUpdateDto user)
     {
         User sourceUser = mapper.Map<User>(user);
-
-        if (sourceUser.UserId is null)
-        {
-            return BadRequest("User id can not be null");
-        }
 
         User? updated = await db.UpdateAsync(sourceUser);
 

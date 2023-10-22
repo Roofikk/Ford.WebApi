@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Ford.EntityModels.Models
+namespace Ford.WebApi.Data.Entities
 {
     public partial class Bone
     {

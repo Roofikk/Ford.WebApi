@@ -1,11 +1,11 @@
-﻿using Ford.EntityModels.Models;
-using Ford.DataContext.Sqlite;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Ford.WebApi.Data.Entities;
+using Ford.WebApi.Data;
 
 namespace Ford.WebApi.Repositories;
 
-public class UserRepository : IRepository<User, string>
+public class UserRepository : IRepository<User, long>
 {
     private FordContext db;
 
@@ -16,7 +16,7 @@ public class UserRepository : IRepository<User, string>
 
     public async Task<User?> CreateAsync(User user)
     {
-        EntityEntry<User> added = await db.Users.AddAsync(user);
+        var added = await db.Users.AddAsync(user);
         return added.Entity;
     }
 
@@ -26,27 +26,27 @@ public class UserRepository : IRepository<User, string>
         return users;
     }
 
-    public async Task<User?> RetrieveAsync(string id)
+    public async Task<User?> RetrieveAsync(long id)
     {
-        return await db.Users.FirstOrDefaultAsync(u => u.UserId == id);
+        return await db.Users.FirstOrDefaultAsync(u => u.Id == id);
     }
 
     public async Task<User?> UpdateAsync(User user)
     {
-        User? find = await RetrieveAsync(user.UserId);
+        User? find = await RetrieveAsync(user.Id);
 
         if (find is null)
         {
             return null;
         }
 
-        user.Login = find.Login;
+        user.Email = find.Email;
         user.CreationDate = find.CreationDate;
         db.Entry(find).CurrentValues.SetValues(user);
         return user;
     }
 
-    public async Task<bool> DeleteAsync(string id)
+    public async Task<bool> DeleteAsync(long id)
     {
         User? user = await RetrieveAsync(id);
 
@@ -63,12 +63,12 @@ public class UserRepository : IRepository<User, string>
 
     public async Task<bool> IsExistAsync(User user)
     {
-        return await IsExistAsync(user.UserId);
+        return await IsExistAsync(user.Id);
     }
 
-    public async Task<bool> IsExistAsync(string id)
+    public async Task<bool> IsExistAsync(long id)
     {
-        User? user = await db.Users.FirstOrDefaultAsync(u => u.UserId == id);
+        User? user = await db.Users.FirstOrDefaultAsync(u => u.Id == id);
         return user is not null;
     }
 

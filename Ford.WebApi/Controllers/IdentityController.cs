@@ -1,15 +1,18 @@
-﻿using Ford.DataContext.Sqlite;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Ford.EntityModels.Models;
 using Ford.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using Ford.WebApi.PasswordHasher;
+using Microsoft.AspNetCore.Identity;
+using Ford.WebApi.Dtos.User;
+using Ford.WebApi.Data.Entities;
+using Ford.WebApi.Data;
+using System.Data.Entity;
 
 namespace Ford.WebApi.Controllers;
 
@@ -18,74 +21,100 @@ namespace Ford.WebApi.Controllers;
 public class IdentityController : ControllerBase
 {
     private readonly FordContext db;
+    private readonly UserManager<User> userManager;
     private readonly IConfiguration configuration;
     private readonly IPasswordHasher passwordHasher;
 
-    private static readonly TimeSpan tokenLifeTime = TimeSpan.FromHours(2);
+    private static readonly TimeSpan tokenLifeTime = TimeSpan.FromDays(14);
 
-    public IdentityController(FordContext db, IConfiguration configuration, IPasswordHasher passwordHasher)
+    public IdentityController(FordContext db, IConfiguration configuration, 
+        IPasswordHasher passwordHasher, UserManager<User> userManager)
     {
         this.db = db;
         this.configuration = configuration;
         this.passwordHasher = passwordHasher;
+        this.userManager = userManager;
     }
 
-    [HttpPost("auth")]
-    public async Task<IActionResult> SignUp([FromBody]UserSignUp user)
+    [HttpPost()]
+    [Route("register")]
+    public async Task<ActionResult<UserGettingDto>> SignUp([FromBody]UserSignUp request)
     {
-        if (user is null)
+        if (!ModelState.IsValid)
         {
-            return BadRequest("User is null");
+            return BadRequest(request);
         }
 
-        User? existingUser = await db.Users.FirstOrDefaultAsync(u => u.Login == user.Login);
-
-        if (existingUser is not null)
+        User user = new User()
         {
-            return Conflict();
+            UserName = request.Login,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            BirthDate = request.BirthDate
+        };
+        var result = await userManager.CreateAsync(user, request.Password);
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(error.Code, error.Description);
+        }
+        
+        if (!result.Succeeded)
+        {
+            return BadRequest(request);
         }
 
-        RandomNumberGenerator rng = RandomNumberGenerator.Create();
-        byte[] saltBytes = new byte[16];
-        rng.GetBytes(saltBytes);
-        string salt = Convert.ToBase64String(saltBytes);
+        var findUser = await db.Users.FirstOrDefaultAsync(u => u.UserName == request.Login);
 
-        db.Users.Add(new User
+        if (findUser == null)
         {
-            UserId = Guid.NewGuid().ToString(),
-            Login = user.Login,
-            Salt = salt,
-            HashedPassword = passwordHasher.Hash(user.Password),
-            Name = user.Name,
-            Email = user.Email
-        });
+            throw new Exception($"User {request.Email} not found");
+        }
 
-        if ((await db.SaveChangesAsync()) == 1)
+        await userManager.AddToRoleAsync(findUser, Roles.Member);
+
+        return new UserGettingDto
         {
-            return Ok();
-        }
-        else
-        {
-            return BadRequest();
-        }
+            UserId = user.Id.ToString(),
+            Login = request.Login,
+            Email = request.Email,
+            FirstName = request.FirstName,
+            LastName = request?.LastName,
+            BirthDate = request?.BirthDate,
+            CreationDate = user.CreationDate
+        };
     }
 
-    // check success existing user hash and get secret encrypting token
-    // user should decrypt token on our local machine
-    [HttpPost("token")]
-    public async Task<ActionResult<string>> SignIn([FromBody]UserSignIn request)
+    [HttpPost()]
+    [Route("login")]
+    public async Task<ActionResult<string>> Login([FromBody] UserSignIn request)
     {
-        User? user = await db.Users.SingleOrDefaultAsync(u => u.Login == request.Login);
+        User managedUser = await userManager.FindByNameAsync(request.Login);
 
-        if (user is null)
+        if (managedUser is null)
         {
             return NotFound("User not found");
         }
 
-        if (!passwordHasher.Verify(user.HashedPassword, request.Password))
+        bool isPasswordValid = await userManager.CheckPasswordAsync(managedUser, request.Password);
+
+        if (!isPasswordValid)
         {
             return Unauthorized();
         }
+
+        var user = db.Users.FirstOrDefault(u => u.UserName == request.Login);
+
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+        
+        List<long> roleIds = db.UserRoles.Where(r => r.UserId == user.Id)
+            .Select(x => x.RoleId).ToList();
+
+        var roles = db.Roles.Where(x => roleIds.Contains(x.Id)).ToList();
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var issuer = configuration["Jwt:Issuer"];
@@ -95,10 +124,10 @@ public class IdentityController : ControllerBase
         List<Claim> claims = new List<Claim>
         {
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new (JwtRegisteredClaimNames.Sub, user.UserId),
-            new (ClaimTypes.Email, user.Email ?? ""),
-            new (ClaimTypes.Name, user.Login),
-            new (ClaimTypes.Role, user.Role)
+            new (JwtRegisteredClaimNames.Sub, managedUser.Id.ToString()),
+            new (ClaimTypes.Email, managedUser.Email ?? ""),
+            new (ClaimTypes.Name, managedUser.UserName),
+            new (ClaimTypes.Role, string.Join(" ", roles.Select(r => r.Name)))
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor

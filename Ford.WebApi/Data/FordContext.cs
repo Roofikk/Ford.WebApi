@@ -1,11 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Ford.EntityModels.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Ford.WebApi.Data.Entities;
 
-namespace Ford.DataContext.Sqlite;
+namespace Ford.WebApi.Data;
 
-public partial class FordContext : DbContext
+public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
 {
-    public FordContext()
+    public FordContext() : base()
     {
     }
 
@@ -18,7 +20,6 @@ public partial class FordContext : DbContext
     public virtual DbSet<Horse> Horses { get; set; } = null!;
     public virtual DbSet<Save> Saves { get; set; } = null!;
     public virtual DbSet<SaveBone> SaveBones { get; set; } = null!;
-    public virtual DbSet<User> Users { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -33,7 +34,7 @@ public partial class FordContext : DbContext
     {
         modelBuilder.Entity<User>(entity =>
         {
-            entity.Property(e => e.UserId).ValueGeneratedNever();
+            entity.Property(x => x.Id).ValueGeneratedOnAdd();
         });
 
         modelBuilder.Entity<Horse>(entity =>
@@ -68,16 +69,14 @@ public partial class FordContext : DbContext
             entity.HasOne(d => d.Bone)
                 .WithMany(p => p.SaveBones)
                 .HasForeignKey(d => d.BoneId)
-                .OnDelete(DeleteBehavior.ClientSetNull);
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(d => d.Save)
                 .WithMany(p => p.SaveBones)
                 .HasForeignKey(d => d.SaveId)
-                .OnDelete(DeleteBehavior.ClientSetNull);
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
-        OnModelCreatingPartial(modelBuilder);
+        base.OnModelCreating(modelBuilder);
     }
-
-    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
