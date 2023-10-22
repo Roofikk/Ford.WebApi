@@ -6,14 +6,12 @@ using System.Security.Claims;
 using System.Text;
 using Ford.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using Ford.WebApi.PasswordHasher;
 using Microsoft.AspNetCore.Identity;
 using Ford.WebApi.Dtos.User;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using System.Data.Entity;
-using System.Globalization;
+using Ford.WebApi.Services.Identity;
 
 namespace Ford.WebApi.Controllers;
 
@@ -23,23 +21,20 @@ public class IdentityController : ControllerBase
 {
     private readonly FordContext db;
     private readonly UserManager<User> userManager;
-    private readonly IConfiguration configuration;
-    private readonly IPasswordHasher passwordHasher;
+    private readonly ITokenService tokenService;
 
     private static readonly TimeSpan tokenLifeTime = TimeSpan.FromDays(14);
 
-    public IdentityController(FordContext db, IConfiguration configuration, 
-        IPasswordHasher passwordHasher, UserManager<User> userManager)
+    public IdentityController(FordContext db, ITokenService tokenService, UserManager<User> userManager)
     {
         this.db = db;
-        this.configuration = configuration;
-        this.passwordHasher = passwordHasher;
+        this.tokenService = tokenService;
         this.userManager = userManager;
     }
 
     [HttpPost()]
     [Route("register")]
-    public async Task<ActionResult<UserGettingDto>> SignUp([FromBody]UserSignUp request)
+    public async Task<ActionResult<UserGettingDto>> Register([FromBody]UserRegister request)
     {
         if (!ModelState.IsValid)
         {
@@ -91,7 +86,7 @@ public class IdentityController : ControllerBase
 
     [HttpPost()]
     [Route("login")]
-    public async Task<ActionResult<string>> Login([FromBody] UserSignIn request)
+    public async Task<ActionResult<AuthResponse>> Login([FromBody] UserLogin request)
     {
         User managedUser = await userManager.FindByNameAsync(request.Login);
 
@@ -118,36 +113,15 @@ public class IdentityController : ControllerBase
             .Select(x => x.RoleId).ToList();
 
         var roles = db.Roles.Where(x => roleIds.Contains(x.Id)).ToList();
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var issuer = configuration["Jwt:Issuer"];
-        var audience = configuration["Jwt:Audience"];
-        var key = Encoding.ASCII.GetBytes(configuration["Jwt:Key"]);
-
-        List<Claim> claims = new List<Claim>
-        {
-            new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new (JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
-            new (ClaimTypes.NameIdentifier, managedUser.Id.ToString()),
-            new (ClaimTypes.Email, managedUser.Email!),
-            new (ClaimTypes.Name, managedUser.UserName),
-            new (ClaimTypes.Role, string.Join(",", roles.Select(r => r.Name)))
-        };
-
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.Add(tokenLifeTime),
-            Issuer = issuer,
-            Audience = audience,
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
-        };
-
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        var jwtToken = tokenHandler.WriteToken(token);
-
+        string? jwtToken = tokenService.GenerateToken(user, roles, tokenLifeTime);
         // should encrypt this token and after return to user
-        return Ok(jwtToken);
+
+        return new AuthResponse
+        {
+            Login = request.Login,
+            Email = user.Email,
+            Token = jwtToken,
+        };
     }
 
     [Authorize]

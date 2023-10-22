@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Ford.WebApi.Data.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
 using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
 
@@ -14,55 +15,34 @@ public static class JwtBearerExtensions
 {
     public static List<Claim> CreateClaims(this User user, List<IdentityRole<long>> roles)
     {
-        var claims = new List<Claim>
+        List<Claim> claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.UserName!),
-            new(ClaimTypes.Email, user.Email!),
-            new(ClaimTypes.Role, string.Join(" ", roles.Select(x => x.Name))),
+            new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new (JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
+            new (ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new (ClaimTypes.Email, user.Email!),
+            new (ClaimTypes.Name, user.UserName),
+            new (ClaimTypes.Role, string.Join(",", roles.Select(r => r.Name)))
         };
         return claims;
     }
     
-    public static SigningCredentials CreateSigningCredentials(this IConfiguration configuration)
+    public static string CreateToken(this List<Claim> claims, string? issuer, 
+        string? audience, byte[] key, TimeSpan tokenLifeTime)
     {
-        return new SigningCredentials(
-            new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(configuration["Jwt:Secret"]!)
-            ),
-            SecurityAlgorithms.HmacSha256
-        );
-    }
-
-    public static JwtSecurityToken CreateJwtToken(this IEnumerable<Claim> claims, IConfiguration configuration)
-    {
-        var expire = configuration.GetSection("Jwt:Expire").Get<int>();
-        
-        return new JwtSecurityToken(
-            configuration["Jwt:Issuer"],
-            configuration["Jwt:Audience"],
-            claims,
-            expires: DateTime.UtcNow.AddMinutes(expire),
-            signingCredentials: configuration.CreateSigningCredentials()
-        );
-    }
-    
-    public static JwtSecurityToken CreateToken(this IConfiguration configuration, List<Claim> authClaims)
-    {
-        var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Secret"]!));
-        var tokenValidityInMinutes = configuration.GetSection("Jwt:TokenValidityInMinutes").Get<int>();
-        
-        var token = new JwtSecurityToken(
-            issuer: configuration["Jwt:Issuer"],
-            audience: configuration["Jwt:Audience"],
-            expires: DateTime.Now.AddMinutes(tokenValidityInMinutes),
-            claims: authClaims,
-            signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+        var securityToken = new JwtSecurityToken
+        (
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: DateTime.UtcNow.Add(tokenLifeTime),
+            signingCredentials: new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
         );
 
-        return token;
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var jwtToken = tokenHandler.WriteToken(securityToken);
+
+        return jwtToken;
     }
 
     public static string GenerateRefreshToken(this IConfiguration configuration)

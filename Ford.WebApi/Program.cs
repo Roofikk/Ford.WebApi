@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using Ford.WebApi.Extensions;
+using Ford.WebApi.Services.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,26 +75,27 @@ builder.Services.AddSwaggerGen(opts =>
         BearerFormat = "JWT",
         //Scheme = "Bearer"
     });
-    //opts.AddSecurityRequirement(new OpenApiSecurityRequirement
-    //{
-    //    {
-    //        new OpenApiSecurityScheme
-    //        {
-    //            Reference = new OpenApiReference
-    //            {
-    //                Type = ReferenceType.SecurityScheme,
-    //                Id = "Bearer"
-    //            }
-    //        },
-    //        new string[] {}
-    //    }
-    //});
+    opts.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
     opts.OperationFilter<SecurityRequirementsOperationFilter>();
 });
 
 builder.Services.AddScoped<IRepository<User, long>, UserRepository>();
 builder.Services.AddScoped<IRepository<Horse, long>, HorseRepository>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 var app = builder.Build();
 

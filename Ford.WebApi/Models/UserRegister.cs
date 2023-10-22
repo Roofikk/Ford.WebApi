@@ -1,6 +1,6 @@
 ﻿namespace Ford.WebApi.Models
 {
-    public class UserSignUp
+    public class UserRegister
     {
         public string Login { get; set; } = null!;
         public string Password { get; set; } = null!;
