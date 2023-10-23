@@ -1,17 +1,15 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using Ford.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using Ford.WebApi.Dtos.User;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using System.Data.Entity;
 using Ford.WebApi.Services.Identity;
+using Ford.WebApi.Dtos.User;
+using System.Security.Claims;
+using AutoMapper;
 
 namespace Ford.WebApi.Controllers;
 
@@ -22,14 +20,16 @@ public class IdentityController : ControllerBase
     private readonly FordContext db;
     private readonly UserManager<User> userManager;
     private readonly ITokenService tokenService;
+    private readonly IMapper mapper;
 
     private static readonly TimeSpan tokenLifeTime = TimeSpan.FromDays(14);
 
-    public IdentityController(FordContext db, ITokenService tokenService, UserManager<User> userManager)
+    public IdentityController(FordContext db, ITokenService tokenService, UserManager<User> userManager, IMapper mapper)
     {
         this.db = db;
         this.tokenService = tokenService;
         this.userManager = userManager;
+        this.mapper = mapper;
     }
 
     [HttpPost()]
@@ -125,9 +125,27 @@ public class IdentityController : ControllerBase
     }
 
     [Authorize]
-    [HttpGet("token")]
-    public IActionResult CheckToken()
+    [HttpGet("identity")]
+    public async Task<ActionResult<UserGettingDto>> GetUserInfo()
     {
-        return Ok();
+        string? jwtToken = Request.Headers["Authorization"];
+        ClaimsPrincipal? principal = tokenService.GetPrincipalFromToken(jwtToken.Replace("Bearer ", string.Empty));
+
+        if (principal == null)
+        {
+            return Unauthorized("Invalid access token");
+        }
+
+        string? userName = principal.Identity!.Name;
+
+        User? user = await userManager.FindByNameAsync(userName);
+
+        if (user is null)
+        {
+            return BadRequest("Invalid access token");
+        }
+
+        UserGettingDto userDto = mapper.Map<UserGettingDto>(user);
+        return userDto;
     }
 }

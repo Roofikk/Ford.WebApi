@@ -33,9 +33,9 @@ builder.Services.AddAuthentication(options =>
             ValidateAudience = true,
             ValidAudience = builder.Configuration["Jwt:Audience"],
             ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                builder.Configuration["Jwt:Key"])),
-            ValidateIssuerSigningKey = true
+                builder.Configuration["Jwt:Key"]))
         };
     });
 builder.Services.AddAuthorization(opts =>
@@ -84,7 +84,6 @@ builder.Services.AddSwaggerGen(opts =>
             new string[] {}
         }
     });
-    opts.OperationFilter<SecurityRequirementsOperationFilter>();
 });
 
 builder.Services.AddScoped<IRepository<User, long>, UserRepository>();
