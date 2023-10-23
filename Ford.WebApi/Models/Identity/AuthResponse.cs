@@ -1,4 +1,4 @@
-﻿namespace Ford.WebApi.Models;
+﻿namespace Ford.WebApi.Models.Identity;
 
 public class AuthResponse
 {

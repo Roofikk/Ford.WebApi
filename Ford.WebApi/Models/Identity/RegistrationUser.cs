@@ -1,4 +1,4 @@
-﻿namespace Ford.WebApi.Models
+﻿namespace Ford.WebApi.Models.Identity
 {
     public class RegistrationUser
     {
@@ -6,6 +6,6 @@
         public string Password { get; set; } = null!;
         public string Email { get; set; } = null!;
         public string Name { get; set; } = null!;
-        
+
     }
 }

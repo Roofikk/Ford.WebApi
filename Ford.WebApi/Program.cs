@@ -66,9 +66,9 @@ builder.Services.AddSwaggerGen(opts =>
         In = ParameterLocation.Header,
         Description = "Please enter a valid token",
         Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey,
+        Type = SecuritySchemeType.Http,
         BearerFormat = "JWT",
-        //Scheme = "Bearer"
+        Scheme = "Bearer"
     });
     opts.AddSecurityRequirement(new OpenApiSecurityRequirement
     {

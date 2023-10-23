@@ -46,7 +46,7 @@ public class UserProfiles : Profile
         CreateMap<UserForUpdateDto, User>()
             .ForMember(
                 dest => dest.Id,
-                opt => opt.MapFrom(src => Guid.Parse(src.Id)))
+                opt => opt.MapFrom(src => src.Id))
             .ForMember(
                 dest => dest.Email,
                 opt => opt.MapFrom(src => src.Email))

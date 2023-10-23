@@ -1,18 +1,19 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Ford.WebApi.Models;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
-using System.Data.Entity;
 using Ford.WebApi.Services.Identity;
 using Ford.WebApi.Dtos.User;
 using System.Security.Claims;
 using AutoMapper;
+using Ford.WebApi.Models.Identity;
+using System.Data.Entity.Infrastructure;
 
 namespace Ford.WebApi.Controllers;
 
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class IdentityController : ControllerBase
@@ -32,7 +33,8 @@ public class IdentityController : ControllerBase
         this.mapper = mapper;
     }
 
-    [HttpPost()]
+    [AllowAnonymous]
+    [HttpPost]
     [Route("register")]
     public async Task<ActionResult<UserGettingDto>> Register([FromBody] UserRegister request)
     {
@@ -51,7 +53,7 @@ public class IdentityController : ControllerBase
             CreationDate = DateTime.Now,
             LastUpdatedDate = DateTime.Now
         };
-        var result = await userManager.CreateAsync(user, request.Password);
+        IdentityResult result = await userManager.CreateAsync(user, request.Password);
 
         foreach (var error in result.Errors)
         {
@@ -71,20 +73,13 @@ public class IdentityController : ControllerBase
         }
 
         await userManager.AddToRoleAsync(findUser, Roles.Member);
+        var userDto = mapper.Map<UserGettingDto>(user);
 
-        return new UserGettingDto
-        {
-            UserId = user.Id.ToString(),
-            Login = request.Login,
-            Email = request.Email,
-            FirstName = request.FirstName,
-            LastName = request?.LastName,
-            BirthDate = request?.BirthDate,
-            CreationDate = user.CreationDate
-        };
+        return userDto;
     }
 
-    [HttpPost()]
+    [AllowAnonymous]
+    [HttpPost]
     [Route("login")]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] UserLogin request)
     {
@@ -124,8 +119,8 @@ public class IdentityController : ControllerBase
         };
     }
 
-    [Authorize]
-    [HttpGet("identity")]
+    [HttpGet]
+    [Route("/api/account")]
     public async Task<ActionResult<UserGettingDto>> GetUserInfo()
     {
         string? jwtToken = Request.Headers["Authorization"];
@@ -147,5 +142,111 @@ public class IdentityController : ControllerBase
 
         UserGettingDto userDto = mapper.Map<UserGettingDto>(user);
         return userDto;
+    }
+
+    [HttpPost]
+    [Route("/api/account")]
+    public async Task<ActionResult<UserGettingDto>> Update([FromBody] UpdateUserRequest request)
+    {
+        if (!Request.Headers.TryGetValue("Authorization", out var token))
+        {
+            return Unauthorized("Invalid access token");
+        }
+        else
+        {
+            User? user = await GetUserByToken(token);
+
+            if (user is null)
+            {
+                return Unauthorized("Invalid access token");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(request);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+            {
+                //Learn about update phone number
+                await userManager.SetPhoneNumberAsync(user, request.PhoneNumber);
+            }
+
+            user.FirstName = request.FirstName;
+            user.LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName;
+            user.City = string.IsNullOrEmpty(request.City) ? null : request.City;
+            user.Region = string.IsNullOrEmpty(request.Region) ? null : request.Region;
+            user.Country = string.IsNullOrEmpty(request.Country) ? null : request.Country;
+            user.BirthDate = request.BirthDate is null ? null : request.BirthDate;
+            user.LastUpdatedDate = DateTime.UtcNow;
+
+            await db.SaveChangesAsync();
+
+            return Ok(request);
+        }
+    }
+
+    [HttpPost]
+    [Route("/api/account/password")]
+    public async Task<ActionResult<AuthResponse>> ChangePassword([FromBody] RequestChangePassword request)
+    {
+        if (!Request.Headers.TryGetValue("Authorization", out var token))
+        {
+            return Unauthorized("Invalid access token");
+        }
+        else
+        {
+            if (request.CurrentPassword == request.NewPassword)
+            {
+                return BadRequest("Current password and new password is equal");
+            }
+
+            User? user = await GetUserByToken(token);
+
+            if (user is null)
+            {
+                return Unauthorized("Invalid access token");
+            }
+
+            IdentityResult result = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(error.Code, error.Description);
+            }
+
+            if (!result.Succeeded)
+            {
+                return BadRequest();
+            }
+
+            return await Login(new UserLogin
+            {
+                Login = user.UserName,
+                Password = request.NewPassword
+            });
+        }
+    }
+
+    private async Task<User?> GetUserByToken(string? jwtToken)
+    {
+        ClaimsPrincipal? principal = tokenService.GetPrincipalFromToken(jwtToken.Replace("Bearer ", string.Empty));
+
+        if (principal == null)
+        {
+            return null;
+        }
+
+        string? userName = principal.Identity!.Name;
+        User? user = await userManager.FindByNameAsync(userName);
+
+        if (user is null)
+        {
+            return null;
+        }
+        else
+        {
+            return user;
+        }
     }
 }
