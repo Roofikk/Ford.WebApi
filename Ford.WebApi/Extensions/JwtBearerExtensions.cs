@@ -45,6 +45,7 @@ public static class JwtBearerExtensions
         return jwtToken;
     }
 
+    //While I don't know why I need this method
     public static string GenerateRefreshToken(this IConfiguration configuration)
     {
         var randomNumber = new byte[64];
@@ -53,6 +54,7 @@ public static class JwtBearerExtensions
         return Convert.ToBase64String(randomNumber);
     }
 
+    //For getting info about authorizing user
     public static ClaimsPrincipal? GetPrincipalFromExpiredToken(this IConfiguration configuration, string? token)
     {
         var tokenValidationParameters = new TokenValidationParameters
