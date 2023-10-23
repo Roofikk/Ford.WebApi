@@ -49,7 +49,7 @@ public class UsersController : ControllerBase
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<UserGettingDto>> Create([FromBody]UserCreationDto user)
+    public async Task<ActionResult<UserGettingDto>> Create([FromBody] UserCreationDto user)
     {
         User sourceUser = mapper.Map<User>(user);
 
