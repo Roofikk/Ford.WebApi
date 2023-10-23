@@ -34,14 +34,14 @@ public class IdentityController : ControllerBase
 
     [HttpPost()]
     [Route("register")]
-    public async Task<ActionResult<UserGettingDto>> Register([FromBody]UserRegister request)
+    public async Task<ActionResult<UserGettingDto>> Register([FromBody] UserRegister request)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(request);
         }
 
-        User user = new User()
+        User user = new User
         {
             UserName = request.Login,
             FirstName = request.FirstName,
@@ -63,7 +63,7 @@ public class IdentityController : ControllerBase
             return BadRequest(request);
         }
 
-        var findUser = await db.Users.FirstOrDefaultAsync(u => u.UserName == request.Login);
+        var findUser = db.Users.FirstOrDefault(u => u.UserName == request.Login);
 
         if (findUser == null)
         {
