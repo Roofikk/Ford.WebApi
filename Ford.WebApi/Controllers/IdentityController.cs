@@ -154,7 +154,7 @@ public class IdentityController : ControllerBase
         }
         else
         {
-            User? user = await GetUserByToken(token);
+            User? user = await tokenService.GetUserByToken(token);
 
             if (user is null)
             {
@@ -201,7 +201,7 @@ public class IdentityController : ControllerBase
                 return BadRequest("Current password and new password is equal");
             }
 
-            User? user = await GetUserByToken(token);
+            User? user = await tokenService.GetUserByToken(token);
 
             if (user is null)
             {
@@ -225,28 +225,6 @@ public class IdentityController : ControllerBase
                 Login = user.UserName,
                 Password = request.NewPassword
             });
-        }
-    }
-
-    private async Task<User?> GetUserByToken(string? jwtToken)
-    {
-        ClaimsPrincipal? principal = tokenService.GetPrincipalFromToken(jwtToken.Replace("Bearer ", string.Empty));
-
-        if (principal == null)
-        {
-            return null;
-        }
-
-        string? userName = principal.Identity!.Name;
-        User? user = await userManager.FindByNameAsync(userName);
-
-        if (user is null)
-        {
-            return null;
-        }
-        else
-        {
-            return user;
         }
     }
 }

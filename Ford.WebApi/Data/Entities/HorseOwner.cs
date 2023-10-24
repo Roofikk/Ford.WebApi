@@ -20,4 +20,11 @@ namespace Ford.WebApi.Data.Entities
         [InverseProperty("HorseOwners")]
         public virtual Horse Horse { get; set; } = null!;
     }
+
+    public static class HorseRuleAccess
+    {
+        public static readonly string Read = "Read";
+        public static readonly string Write = "Write";
+        public static readonly string Owner = "Owner";
+    }
 }

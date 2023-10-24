@@ -11,10 +11,12 @@ namespace Ford.WebApi.Services.Identity;
 public class TokenService : ITokenService
 {
     private readonly IConfiguration configuration;
+    private readonly UserManager<User> userManager;
 
-    public TokenService(IConfiguration configuration)
+    public TokenService(IConfiguration configuration, UserManager<User> userManager)
     {
         this.configuration = configuration;
+        this.userManager = userManager;
     }
 
     public string GenerateToken(User user, List<IdentityRole<long>> roles, TimeSpan tokenLifeTime)
@@ -44,4 +46,26 @@ public class TokenService : ITokenService
 
         return principal;
     }
+
+    public async Task<User?> GetUserByToken(string? jwtToken)
+    {
+        ClaimsPrincipal? principal = GetPrincipalFromToken(jwtToken.Replace("Bearer ", string.Empty));
+
+        if (principal == null)
+        {
+            return null;
+        }
+
+        string? userName = principal.Identity!.Name;
+        User? user = await userManager.FindByNameAsync(userName);
+
+        if (user is null)
+        {
+            return null;
+        }
+        else
+        {
+            return user;
+        }
+    } 
 }
