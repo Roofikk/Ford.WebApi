@@ -7,6 +7,7 @@ using Ford.WebApi.Data;
 using Microsoft.AspNetCore.Authorization;
 using Ford.WebApi.Services.Identity;
 using Microsoft.Extensions.Primitives;
+using Ford.WebApi.Models.Horse;
 
 namespace Ford.WebApi.Controllers;
 
@@ -94,9 +95,6 @@ public class HorsesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Horse>> Create([FromBody] HorseForCreationDto horse)
     {
-        Horse horseDto = mapper.Map<Horse>(horse);
-        IEnumerable<User> intersect = db.Users.IntersectBy(horse.HorseOwners.Select(e => e.UserId), e => e.Id);
-
         if (!Request.Headers.TryGetValue("Authorization", out var token))
         {
             return Unauthorized();
@@ -109,11 +107,15 @@ public class HorsesController : ControllerBase
             return BadRequest();
         }
 
+        Horse horseDto = mapper.Map<Horse>(horse);
+        IEnumerable<User> intersect = db.Users.IntersectBy(horse.HorseOwners.Select(e => e.UserId), u => u.Id);
+
         if (intersect.Any() && intersect.Count() == horse.HorseOwners.Count())
         {
             db.Horses.Add(horseDto);
 
-            HorseOwner? owner = horse.HorseOwners.FirstOrDefault(hw => hw.UserId == user.Id && hw.HorseId == horseDto.HorseId);
+            HorseOwner? owner = horse.HorseOwners.FirstOrDefault(
+                hw => hw.UserId == user.Id && hw.HorseId == horseDto.HorseId);
 
             if (owner is null)
             {
@@ -122,12 +124,30 @@ public class HorsesController : ControllerBase
                     Horse = horseDto,
                     UserId = user.Id,
                     HorseId = horseDto.HorseId,
-                    RuleAccess = HorseRuleAccess.Owner
+                    RuleAccess = OwnerRole.Creator.ToString()
                 });
             }
 
             foreach (var horseOwner in horse.HorseOwners)
             {
+                OwnerRole role = Enum.Parse<OwnerRole>(horseOwner.RuleAccess, true);
+
+                switch (role)
+                {
+                    case OwnerRole.Read:
+                        horseOwner.RuleAccess = OwnerRole.Read.ToString();
+                        break;
+                    case OwnerRole.Write:
+                        horseOwner.RuleAccess = OwnerRole.Write.ToString();
+                        break;
+                    case OwnerRole.All:
+                        horseOwner.RuleAccess = OwnerRole.All.ToString();
+                        break;
+                    default:
+                        string login = intersect.First(u => u.Id == horseOwner.UserId).UserName;
+                        return BadRequest($"Role {role} does not apply to {login}");
+                }
+
                 horseDto.HorseOwners.Add(horseOwner);
             }
 
@@ -149,33 +169,91 @@ public class HorsesController : ControllerBase
         }
     }
 
+    //Не доделал. Надо же еще удалить прошлые, которые не были включены в список!
     [HttpPost]
-    [Route("horseAccess")]
-    public async Task<ActionResult<Horse>> UpdateUserAccess([FromBody]HorseOwner horseOwner)
+    [Route("horseOwners")]
+    public async Task<ActionResult<Horse>> UpdateHorseOwners([FromBody] RequestUpdateHorseOwners requestHorseOwners)
     {
-        IQueryable<Horse> query = db.Horses.Include(h => h.HorseOwners);
-        Horse? horse = await query.FirstOrDefaultAsync(h => h.HorseId == horseOwner.HorseId);
-        User? user = await db.Users.FirstOrDefaultAsync(u => u.Id == horseOwner.UserId);
-
-        if (horse is not null && user is not null)
+        if (!Request.Headers.TryGetValue("Authorization", out var token))
         {
-            horse.HorseOwners.Add(horseOwner);
-            int result = await db.SaveChangesAsync();
+            return Unauthorized();
+        }
 
-            if (result == 1)
+        User? user = await tokenService.GetUserByToken(token);
+
+        if (user is null)
+        {
+            return BadRequest();
+        }
+
+        //Search existing horse owner
+        HorseOwner? currentOwner = await db.HorseOwners.FirstOrDefaultAsync(
+            hw => hw.UserId == user.Id && hw.HorseId == requestHorseOwners.HorseId);
+
+        if (currentOwner is null)
+        {
+            return BadRequest("You do not have access to this object");
+        }
+
+        //Check the possibility of granting role to an object
+        OwnerRole role = Enum.Parse<OwnerRole>(currentOwner.RuleAccess, true);
+        var check = requestHorseOwners.HorseOwners.Where(hw => Enum.Parse<OwnerRole>(hw.RuleAccess) > role - 1);
+
+        if (check.Any())
+        {
+            return BadRequest("Some rules upper than you may provide");
+        }
+
+        IEnumerable<User> intersect = db.Users.IntersectBy(requestHorseOwners.HorseOwners
+            .Select(hw => hw.UserId), u => u.Id).AsEnumerable();
+
+        if (!intersect.Any() || intersect.Count() != requestHorseOwners.HorseOwners.Count())
+        {
+            return BadRequest("Some users do not exist");
+        }
+
+        IEnumerable<HorseOwner> includesOwners = db.HorseOwners.Where(o => o.HorseId == requestHorseOwners.HorseId);
+
+        foreach (var newOwner in requestHorseOwners.HorseOwners)
+        {
+            var existHw = includesOwners.FirstOrDefault(o => o.UserId == newOwner.UserId);
+
+            if (existHw is null)
             {
-                HorseRetrievingDto horseDto = mapper.Map<HorseRetrievingDto>(horse);
-                return Ok(horseDto);
+                db.HorseOwners.Add(new HorseOwner
+                {
+                    HorseId = requestHorseOwners.HorseId,
+                    UserId = newOwner.UserId,
+                    RuleAccess = newOwner.RuleAccess
+                });
             }
             else
             {
-                return BadRequest();
+                existHw.RuleAccess = newOwner.RuleAccess;
             }
         }
-        else
-        {
-            return NotFound();
-        }
+
+        return Ok();
+
+        //if ()
+        //{
+        //    horse.HorseOwners.Add(requestHorseOwners);
+        //    int result = await db.SaveChangesAsync();
+
+        //    if (result == 1)
+        //    {
+        //        HorseRetrievingDto horseDto = mapper.Map<HorseRetrievingDto>(horse);
+        //        return Ok(horseDto);
+        //    }
+        //    else
+        //    {
+        //        return BadRequest();
+        //    }
+        //}
+        //else
+        //{
+        //    return NotFound();
+        //}
     }
 
     [HttpPut]

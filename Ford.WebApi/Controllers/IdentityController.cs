@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Ford.WebApi.Models;
 using Microsoft.AspNetCore.Identity;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;

@@ -21,10 +21,27 @@ namespace Ford.WebApi.Data.Entities
         public virtual Horse Horse { get; set; } = null!;
     }
 
-    public static class HorseRuleAccess
+    public class HorseRuleAccess
     {
-        public static readonly string Read = "Read";
-        public static readonly string Write = "Write";
-        public static readonly string Owner = "Owner";
+        // Only read saves and other info about horse
+        public const string Read = "READ";
+        // Read/Write info about horse and add/edit other saves
+        public const string Write = "WRITE";
+        // Also add/remove other users to horse
+        public const string All = "ALL";
+        // Creation horse
+        public const string Owner = "OWNER";
+    }
+
+    public enum OwnerRole
+    {
+        // Only read saves and other info about horse
+        Read = 0,
+        // Read/Write info about horse and add/edit other saves
+        Write = 1,
+        // Also add/remove other users to horse
+        All = 2,
+        // There can only be one creator
+        Creator = 3
     }
 }
