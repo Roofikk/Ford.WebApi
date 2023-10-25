@@ -1,4 +1,6 @@
-﻿namespace Ford.WebApi.Models.Horse;
+﻿using Ford.WebApi.Data.Entities;
+
+namespace Ford.WebApi.Models.Horse;
 
 public class RequestUpdateHorseOwners
 {
@@ -10,4 +12,5 @@ public class RequestHorseOwner
 {
     public long UserId { get; set; }
     public string RuleAccess { get; set; } = null!;
+    public User? User { get; set; }
 }

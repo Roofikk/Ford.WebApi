@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Ford.WebApi.Services.Identity;
 using Microsoft.Extensions.Primitives;
 using Ford.WebApi.Models.Horse;
+using System.Collections.ObjectModel;
 
 namespace Ford.WebApi.Controllers;
 
@@ -174,7 +175,7 @@ public class HorsesController : ControllerBase
     // Мдааа... Херни наворотил.
     [HttpPost]
     [Route("horseOwners")]
-    public async Task<ActionResult<Horse>> UpdateHorseOwners([FromBody] RequestUpdateHorseOwners requestHorseOwners)
+    public async Task<ActionResult<Horse>> UpdateHorseOwnersAsync([FromBody] RequestUpdateHorseOwners requestHorseOwners)
     {
         if (!Request.Headers.TryGetValue("Authorization", out var token))
         {
@@ -206,76 +207,91 @@ public class HorsesController : ControllerBase
             return BadRequest("Some rules upper than you may provide");
         }
 
-        IEnumerable<User> intersect = db.Users.IntersectBy(requestHorseOwners.HorseOwners
-            .Select(hw => hw.UserId), u => u.Id).AsEnumerable();
+        Horse? horse = await db.Horses.Include(h => h.HorseOwners)
+            .FirstOrDefaultAsync(h => h.HorseId == requestHorseOwners.HorseId);
 
-        if (!intersect.Any() || intersect.Count() != requestHorseOwners.HorseOwners.Count())
+        if (horse is null)
         {
-            return BadRequest("Some users do not exist");
+            return BadRequest("Horse not found");
         }
 
-        IEnumerable<HorseOwner> includesOwners = db.HorseOwners.Where(o => o.HorseId == requestHorseOwners.HorseId);
+        Collection<HorseOwner> newOwners = new();
 
-        foreach (var newOwner in requestHorseOwners.HorseOwners)
+        if (requestHorseOwners.HorseOwners.FirstOrDefault(o => o.UserId == user.Id) is null)
         {
-            var existHw = includesOwners.FirstOrDefault(o => o.UserId == newOwner.UserId);
-
-            if (existHw is null)
+            newOwners.Add(new HorseOwner
             {
-                db.HorseOwners.Add(new HorseOwner
-                {
-                    HorseId = requestHorseOwners.HorseId,
-                    UserId = newOwner.UserId,
-                    RuleAccess = newOwner.RuleAccess
-                });
-            }
-            else
-            {
-                existHw.RuleAccess = newOwner.RuleAccess;
-            }
+                UserId = user.Id,
+                HorseId = requestHorseOwners.HorseId
+            });
         }
 
-        return Ok();
+        foreach (var reqOwner in requestHorseOwners.HorseOwners)
+        {
+            newOwners.Add(new HorseOwner
+            {
+                UserId = reqOwner.UserId,
+                HorseId = requestHorseOwners.HorseId
+            });
+        }
 
-        //if ()
-        //{
-        //    horse.HorseOwners.Add(requestHorseOwners);
-        //    int result = await db.SaveChangesAsync();
+        horse.HorseOwners = newOwners;
 
-        //    if (result == 1)
-        //    {
-        //        HorseRetrievingDto horseDto = mapper.Map<HorseRetrievingDto>(horse);
-        //        return Ok(horseDto);
-        //    }
-        //    else
-        //    {
-        //        return BadRequest();
-        //    }
-        //}
-        //else
-        //{
-        //    return NotFound();
-        //}
+        await db.SaveChangesAsync();
+
+        return horse;
     }
 
     [HttpPut]
-    public async Task<ActionResult<Horse>> Update([FromBody]HorseForUpdateDto horse)
+    public async Task<ActionResult<Horse>> UpdateAsync([FromBody] HorseForUpdateDto horse)
     {
-        Horse? entity = await db.Horses.FirstOrDefaultAsync(h => h.HorseId == horse.HorseId);
-        Horse horseDto = mapper.Map<Horse>(horse);
+        if (!Request.Headers.TryGetValue("Authorization", out var token))
+        {
+            return Unauthorized();
+        }
+
+        User? user = await tokenService.GetUserByToken(token);
+
+        if (user is null)
+        {
+            return BadRequest();
+        }
+
+        bool? check = await CheckAccessToHorseAsync(user.Id, horse.HorseId, OwnerRole.Write);
+
+        if (!check.HasValue)
+        {
+            return BadRequest();
+        }
+        else if (!check.Value)
+        {
+            return BadRequest("Access denied");
+        }
+
+        Horse? entity = await db.Horses.Include(h => h.HorseOwners)
+            .FirstOrDefaultAsync(h => h.HorseId == horse.HorseId);
 
         if (entity is null)
         {
-            return NotFound();
+            return BadRequest("Horse not found");
         }
 
-        horseDto.CreationDate = entity.CreationDate;
-        db.Entry(entity).CurrentValues.SetValues(horseDto);
-        return Ok(entity);
+        entity.Name = horse.Name;
+        entity.BirthDate = horse.BirthDate;
+        entity.Sex = horse.Sex;
+        entity.City = horse.City;
+        entity.Region = horse.Region;
+        entity.Country = horse.Country;
+
+        return await UpdateHorseOwnersAsync(new RequestUpdateHorseOwners
+        {
+            HorseId = entity.HorseId,
+            HorseOwners = horse.Owners
+        });
     }
 
     [HttpDelete]
-    public async Task<ActionResult> Delete(long id)
+    public async Task<ActionResult> DeleteAsync(long id)
     {
         Horse? horse = await db.Horses.FirstOrDefaultAsync(h => h.Equals(id));
 
@@ -288,5 +304,31 @@ public class HorsesController : ControllerBase
         {
             return NotFound();
         }
+    }
+
+    private async Task<HorseOwner?> GetHorseOwnerAsync(long userId, long horseId)
+    {
+        HorseOwner? owner = await db.HorseOwners.FirstOrDefaultAsync(
+            o => o.UserId == userId && o.HorseId == horseId);
+
+        return owner;
+    }
+
+    private bool? CheckAccessToHorse(HorseOwner? owner, OwnerRole needRole)
+    {
+        if (owner is null)
+        {
+            return null;
+        }
+
+        OwnerRole currentRole = Enum.Parse<OwnerRole>(owner.RuleAccess, true);
+
+        return needRole >= currentRole;
+    }
+
+    private async Task<bool?> CheckAccessToHorseAsync(long userId, long horseId, OwnerRole needRole)
+    {
+        HorseOwner? owner = await GetHorseOwnerAsync(userId, horseId);
+        return CheckAccessToHorse(owner, needRole);
     }
 }

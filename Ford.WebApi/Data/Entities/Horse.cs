@@ -22,7 +22,7 @@ namespace Ford.WebApi.Data.Entities
         [Column(TypeName = "datetime")]
         public DateTime? BirthDate { get; set; }
         [Column(TypeName = "nvarchar(6)")]
-        public Sex Sex { get; set; }
+        public string? Sex { get; set; }
         [Column(TypeName = "nvarchar(15)")]
         public string? City { get; set; }
         [Column(TypeName = "nvarchar(15)")]
