@@ -169,7 +169,9 @@ public class HorsesController : ControllerBase
         }
     }
 
-    //Не доделал. Надо же еще удалить прошлые, которые не были включены в список!
+    // Не доделал. Надо же еще удалить прошлые, которые не были включены в список!
+    // Надо было просто у лошади взять список владельцев и изменить его на текущий с текущими параметрами...
+    // Мдааа... Херни наворотил.
     [HttpPost]
     [Route("horseOwners")]
     public async Task<ActionResult<Horse>> UpdateHorseOwners([FromBody] RequestUpdateHorseOwners requestHorseOwners)
