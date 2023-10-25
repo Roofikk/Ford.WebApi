@@ -2,7 +2,7 @@
 
 public class UserGettingDto
 {
-    public string UserId { get; set; } = null!;
+    public long UserId { get; set; }
     public string Login { get; set; } = null!;
     public string? Email { get; set; }
     public string FirstName { get; set; } = null!;

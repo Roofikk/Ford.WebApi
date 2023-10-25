@@ -13,14 +13,14 @@ namespace Ford.WebApi.Dtos.Horse
         public string? Country { get; set; }
         public DateTime CreationDate { get; set; }
         public IEnumerable<Save>? Saves { get; set; }
-        public IEnumerable<HorseUserDto>? Users { get; set; }
+        public IEnumerable<OwnerDto>? Users { get; set; }
     }
 
-    public class HorseUserDto
+    public class OwnerDto
     {
         public string Id { get; set; } = null!;
-        public string Email { get; set; } = null!;
-        public string Name { get; set; } = null!;
+        public string FirstName { get; set; } = null!;
         public string? LastName { get; set; }
+        public string RuleAccess { get; set; } = null!;
     }
 }

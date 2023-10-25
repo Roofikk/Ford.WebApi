@@ -10,10 +10,10 @@ namespace Ford.WebApi.Controllers;
 [ApiController]
 public class UsersController : ControllerBase
 {
-    private readonly IRepository<User, string> db;
+    private readonly IRepository<User, long> db;
     private readonly IMapper mapper;
 
-    public UsersController(IRepository<User, string> db, IMapper mapper)
+    public UsersController(IRepository<User, long> db, IMapper mapper)
     {
         this.db = db;
         this.mapper = mapper;
@@ -23,11 +23,11 @@ public class UsersController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<UserGettingDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Get(string? id)
+    public async Task<IActionResult> Get(long? id)
     {
-        if (!string.IsNullOrEmpty(id))
+        if (id.HasValue)
         {
-            User? user = await db.RetrieveAsync(id);
+            User? user = await db.RetrieveAsync(id.Value);
 
             if (user is null)
             {
@@ -95,7 +95,7 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(string id)
+    public async Task<IActionResult> Delete(long id)
     {
         if (await db.IsExistAsync(id))
         {

@@ -66,35 +66,9 @@ public class HorsesController : ControllerBase
         }
     }
 
-    //[HttpGet]
-    //public async Task<IActionResult> Get(long? horseId)
-    //{
-    //    IQueryable<Horse> horsesDb = db.Horses.Include(h => h.HorseOwners).Include(h => h.Saves);
-
-    //    if (horseId is not null)
-    //    {
-    //        var horse = await horsesDb.FirstOrDefaultAsync(h => h.HorseId == horseId);
-
-    //        if (horse is not null)
-    //        {
-    //            HorseRetrievingDto mappingHorse = mapper.Map<HorseRetrievingDto>(horse);
-    //            return Ok(horse);
-    //        }
-    //        else
-    //        {
-    //            return NotFound();
-    //        }
-    //    }
-    //    else
-    //    {
-    //        var horses = await horsesDb.ToListAsync();
-    //        IEnumerable<HorseRetrievingDto> mapping = mapper.Map<IEnumerable<HorseRetrievingDto>>(horses);
-    //        return Ok(mapping);
-    //    }
-    //}
-
+    // Изменить возвращаемое значение!
     [HttpPost]
-    public async Task<ActionResult<Horse>> Create([FromBody] HorseForCreationDto horse)
+    public async Task<ActionResult<HorseRetrievingDto>> Create([FromBody] HorseForCreationDto requestHorse)
     {
         if (!Request.Headers.TryGetValue("Authorization", out var token))
         {
@@ -108,65 +82,82 @@ public class HorsesController : ControllerBase
             return BadRequest();
         }
 
-        Horse horseDto = mapper.Map<Horse>(horse);
-        IEnumerable<User> intersect = db.Users.IntersectBy(horse.HorseOwners.Select(e => e.UserId), u => u.Id);
-
-        if (intersect.Any() && intersect.Count() == horse.HorseOwners.Count())
+        Horse horseDto = mapper.Map<Horse>(requestHorse);
+        
+        //Add current user
+        horseDto.HorseOwners.Add(new HorseOwner
         {
-            db.Horses.Add(horseDto);
+            Horse = horseDto,
+            User = user,
+            RuleAccess = OwnerRole.Creator.ToString()
+        });
 
-            HorseOwner? owner = horse.HorseOwners.FirstOrDefault(
-                hw => hw.UserId == user.Id && hw.HorseId == horseDto.HorseId);
+        if (requestHorse.HorseOwners is not null)
+        {
+            //Check the possibility of granting role to an object
+            var check = requestHorse.HorseOwners.Where(hw => Enum.Parse<OwnerRole>(hw.RuleAccess) >= OwnerRole.Creator);
 
-            if (owner is null)
+            if (check.Any())
             {
-                db.HorseOwners.Add(new HorseOwner
-                {
-                    Horse = horseDto,
-                    UserId = user.Id,
-                    HorseId = horseDto.HorseId,
-                    RuleAccess = OwnerRole.Creator.ToString()
-                });
+                return BadRequest("Some roles access can not be greater or equal than your");
             }
 
-            foreach (var horseOwner in horse.HorseOwners)
-            {
-                OwnerRole role = Enum.Parse<OwnerRole>(horseOwner.RuleAccess, true);
+            //Find exist user in DB
+            IEnumerable<User> containsUsers = db.Users.Include(u => u.HorseOwners)
+                .Where(u => requestHorse.HorseOwners
+                .Select(o => o.UserId).Contains(u.Id));
 
-                switch (role)
+            if (containsUsers.Any() && containsUsers.Count() == requestHorse.HorseOwners.Count())
+            {
+                foreach (var horseOwner in requestHorse.HorseOwners)
                 {
-                    case OwnerRole.Read:
-                        horseOwner.RuleAccess = OwnerRole.Read.ToString();
-                        break;
-                    case OwnerRole.Write:
-                        horseOwner.RuleAccess = OwnerRole.Write.ToString();
-                        break;
-                    case OwnerRole.All:
-                        horseOwner.RuleAccess = OwnerRole.All.ToString();
-                        break;
-                    default:
-                        string login = intersect.First(u => u.Id == horseOwner.UserId).UserName;
-                        return BadRequest($"Role {role} does not apply to {login}");
+                    //Skip current user which was added early
+                    if (horseOwner.UserId == user.Id)
+                        continue;
+
+                    OwnerRole role = Enum.Parse<OwnerRole>(horseOwner.RuleAccess, true);
+
+                    switch (role)
+                    {
+                        case OwnerRole.Read:
+                            horseOwner.RuleAccess = OwnerRole.Read.ToString();
+                            break;
+                        case OwnerRole.Write:
+                            horseOwner.RuleAccess = OwnerRole.Write.ToString();
+                            break;
+                        case OwnerRole.All:
+                            horseOwner.RuleAccess = OwnerRole.All.ToString();
+                            break;
+                        default:
+                            string login = containsUsers.First(u => u.Id == horseOwner.UserId).UserName;
+                            return BadRequest($"Role {role} does not apply to {login}");
+                    }
+
+                    horseDto.HorseOwners.Add(new HorseOwner
+                    {
+                        Horse = horseDto,
+                        UserId = horseOwner.UserId,
+                        RuleAccess = horseOwner.RuleAccess.ToString(),
+                    });
                 }
-
-                horseDto.HorseOwners.Add(horseOwner);
-            }
-
-            bool result = (await db.SaveChangesAsync()) == 1;
-
-            if (result)
-            {
-                HorseRetrievingDto horseRetrievingDto = mapper.Map<HorseRetrievingDto>(horseDto);
-                return Created($"api/[controller]?horseId={horseRetrievingDto.HorseId}", horseRetrievingDto);
             }
             else
             {
-                return BadRequest();
+                return NotFound("Some users not found");
             }
+        }
+
+        db.Horses.Add(horseDto);
+        int number = db.SaveChanges();
+
+        if (number == (requestHorse.HorseOwners)?.Count() + 2)
+        {
+            var horseRetrieving = mapper.Map<HorseRetrievingDto>(horseDto);
+            return Created($"api/[controller]?horseId={horseDto.HorseId}", horseRetrieving);
         }
         else
         {
-            return NotFound("Some users not found");
+            return BadRequest("Save failed");
         }
     }
 
@@ -293,16 +284,38 @@ public class HorsesController : ControllerBase
     [HttpDelete]
     public async Task<ActionResult> DeleteAsync(long id)
     {
-        Horse? horse = await db.Horses.FirstOrDefaultAsync(h => h.Equals(id));
+        if (!Request.Headers.TryGetValue("Authorization", out var token))
+        {
+            return Unauthorized();
+        }
 
-        if (horse is not null)
+        User? user = await tokenService.GetUserByToken(token);
+
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        Horse? horse = await db.Horses.Include(h => h.HorseOwners)
+            .FirstOrDefaultAsync(h => h.HorseId == id);
+
+        if (horse is null)
+        {
+            return NotFound();
+        }
+
+        HorseOwner? owner = horse.HorseOwners.SingleOrDefault(o => o.UserId == user.Id);
+
+        bool? check = CheckAccessToHorse(owner, OwnerRole.Creator);
+
+        if (check.HasValue && check.Value)
         {
             db.Remove(horse);
             return Ok();
         }
         else
         {
-            return NotFound();
+            return BadRequest($"Object not found or no access to the object. Id: {id}");
         }
     }
 

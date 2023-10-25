@@ -24,7 +24,7 @@ namespace Ford.WebApi.Data.Entities
 
         [ForeignKey("HorseId")]
         [InverseProperty("Saves")]
-        public virtual Horse? Horse { get; set; }
+        public virtual Horse Horse { get; set; }
         [InverseProperty("Save")]
         public virtual ICollection<SaveBone> SaveBones { get; set; }
     }

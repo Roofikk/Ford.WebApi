@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.Horse;
+using Ford.WebApi.Models.Horse;
 using System.Collections.ObjectModel;
 
 namespace Ford.WebApi.Properties;
@@ -41,33 +42,30 @@ public class HorseProfiles : Profile
                 dest => dest.Users,
                 opt => opt.MapFrom(src => src.HorseOwners));
 
-        CreateMap<HorseOwner, HorseUserDto>()
+        CreateMap<HorseOwner, OwnerDto>()
             .ForMember(
                 dest => dest.Id,
                 opt => opt.MapFrom(src => src.UserId))
             .ForMember(
-                dest => dest.Email,
-                opt => opt.MapFrom(src => src.User.UserName.ToString()))
+                dest => dest.RuleAccess,
+                opt => opt.MapFrom(src => src.RuleAccess))
             .ForMember(
-                dest => dest.Name,
+                dest => dest.FirstName,
                 opt => opt.MapFrom(src => src.User.FirstName))
             .ForMember(
                 dest => dest.LastName,
                 opt => opt.MapFrom(src => src.User.LastName));
 
-        CreateMap<User, HorseUserDto>()
+        CreateMap<User, OwnerDto>()
             .ForMember(
                 dest => dest.Id,
                 opt => opt.MapFrom(src => src.Id.ToString()))
             .ForMember(
-                dest => dest.Name,
+                dest => dest.FirstName,
                 opt => opt.MapFrom(src => src.FirstName))
             .ForMember(
                 dest => dest.LastName,
-                opt => opt.MapFrom(src => src.LastName))
-            .ForMember(
-                dest => dest.Email,
-                opt => opt.MapFrom(src => src.Email));
+                opt => opt.MapFrom(src => src.LastName));
 
         CreateMap<HorseForCreationDto, Horse>()
             .ForMember(
@@ -78,7 +76,7 @@ public class HorseProfiles : Profile
                 opt => opt.MapFrom(src => src.BirthDate))
             .ForMember(
                 dest => dest.Sex,
-                opt => opt.MapFrom(src => string.IsNullOrEmpty(src.Sex) ? Sex.None : Enum.Parse<Sex>(src.Sex)))
+                opt => opt.MapFrom(src => src.Sex))
             .ForMember(
                 dest => dest.City,
                 opt => opt.MapFrom(src => src.City))
@@ -89,11 +87,14 @@ public class HorseProfiles : Profile
                 dest => dest.Country,
                 opt => opt.MapFrom(src => src.Country))
             .ForMember(
-                dest => dest.HorseOwners,
-                opt => opt.MapFrom(src => src.HorseOwners))
-            .ForMember(
                 dest => dest.CreationDate,
-                opt => opt.MapFrom(src => DateTime.Now));
+                opt => opt.MapFrom(src => DateTime.Now))
+            .ForMember(
+                dest => dest.Saves,
+                opt => opt.MapFrom(src => new Collection<Save>()))
+            .ForMember(
+                dest => dest.HorseOwners,
+                opt => opt.MapFrom(src => new Collection<HorseOwner>()));
 
         CreateMap<HorseForUpdateDto, Horse>()
             .ForMember(

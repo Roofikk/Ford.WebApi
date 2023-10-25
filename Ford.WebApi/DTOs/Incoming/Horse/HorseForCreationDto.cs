@@ -1,4 +1,5 @@
 ﻿using Ford.WebApi.Data.Entities;
+using Ford.WebApi.Models.Horse;
 
 namespace Ford.WebApi.Dtos.Horse;
 
@@ -10,5 +11,5 @@ public class HorseForCreationDto
     public string? City { get; set; }
     public string? Region { get; set; }
     public string? Country { get; set; }
-    public IEnumerable<HorseOwner> HorseOwners { get; set; } = null!;
+    public IEnumerable<RequestHorseOwner>? HorseOwners { get; set; }
 }

@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 
