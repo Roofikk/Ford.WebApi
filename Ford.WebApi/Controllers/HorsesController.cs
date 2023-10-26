@@ -9,6 +9,7 @@ using Ford.WebApi.Services.Identity;
 using Microsoft.Extensions.Primitives;
 using Ford.WebApi.Models.Horse;
 using System.Collections.ObjectModel;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Ford.WebApi.Controllers;
 
@@ -43,7 +44,8 @@ public class HorsesController : ControllerBase
             return BadRequest();
         }
 
-        IEnumerable<Horse> horses = db.Horses.Include(h => h.HorseOwners).Include(h => h.Saves)
+        //Подумать над нормальной загрузкой!!!
+        IEnumerable<Horse> horses = db.Horses.Include(h => h.HorseOwners).ThenInclude(o => o.User)
             .Where(h => h.HorseOwners.Any(u => u.UserId == user.Id));
 
         if (horses.Any())
@@ -51,11 +53,18 @@ public class HorsesController : ControllerBase
             if (horseId is not null)
             {
                 Horse? horse = horses.FirstOrDefault(h => h.HorseId == horseId);
+
+                if (horse is null)
+                {
+                    return NotFound();
+                }
+
                 HorseRetrievingDto horseDto = mapper.Map<HorseRetrievingDto>(horse);
                 return Ok(horseDto);
             }
             else
             {
+
                 IEnumerable<HorseRetrievingDto> horsesDto = mapper.Map<IEnumerable<HorseRetrievingDto>>(horses);
                 return Ok(horsesDto);
             }
@@ -66,7 +75,6 @@ public class HorsesController : ControllerBase
         }
     }
 
-    // Изменить возвращаемое значение!
     [HttpPost]
     public async Task<ActionResult<HorseRetrievingDto>> Create([FromBody] HorseForCreationDto requestHorse)
     {
