@@ -282,7 +282,7 @@ public class HorsesController : ControllerBase
     }
 
     [HttpDelete]
-    public async Task<ActionResult> DeleteAsync(long id)
+    public async Task<IActionResult> DeleteAsync(long id)
     {
         if (!Request.Headers.TryGetValue("Authorization", out var token))
         {
@@ -306,17 +306,19 @@ public class HorsesController : ControllerBase
 
         HorseOwner? owner = horse.HorseOwners.SingleOrDefault(o => o.UserId == user.Id);
 
-        bool? check = CheckAccessToHorse(owner, OwnerRole.Creator);
+        if (owner is null)
+        {
+            return BadRequest("Horse not found in your list");
+        }
 
-        if (check.HasValue && check.Value)
+        if (Enum.Parse<OwnerRole>(owner.RuleAccess, true) != OwnerRole.Creator)
         {
-            db.Remove(horse);
-            return Ok();
+            return BadRequest("Access denied");
         }
-        else
-        {
-            return BadRequest($"Object not found or no access to the object. Id: {id}");
-        }
+
+        db.Remove(horse);
+        await db.SaveChangesAsync();
+        return Ok();
     }
 
     private async Task<HorseOwner?> GetHorseOwnerAsync(long userId, long horseId)
