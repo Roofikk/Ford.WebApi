@@ -43,8 +43,8 @@ public class HorsesController : ControllerBase
             return BadRequest();
         }
 
-        IQueryable<Horse> dbHorses = db.Horses.Include(h => h.Saves);
-        IEnumerable<Horse> horses = dbHorses.Where(h => h.HorseOwners.Any(u => u.UserId == user.Id));
+        IEnumerable<Horse> horses = db.Horses.Include(h => h.HorseOwners).Include(h => h.Saves)
+            .Where(h => h.HorseOwners.Any(u => u.UserId == user.Id));
 
         if (horses.Any())
         {
@@ -57,7 +57,7 @@ public class HorsesController : ControllerBase
             else
             {
                 IEnumerable<HorseRetrievingDto> horsesDto = mapper.Map<IEnumerable<HorseRetrievingDto>>(horses);
-                return Ok(horses);
+                return Ok(horsesDto);
             }
         }
         else
