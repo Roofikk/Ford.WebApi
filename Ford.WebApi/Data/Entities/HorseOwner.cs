@@ -13,7 +13,7 @@ namespace Ford.WebApi.Data.Entities
         [Column(TypeName = "nvarchar(8)")]
         public string RuleAccess { get; set; } = null!;
 
-        [ForeignKey("Id")]
+        [ForeignKey("UserId")]
         [InverseProperty("HorseOwners")]
         public virtual User User { get; set; } = null!;
         [ForeignKey("HorseId")]

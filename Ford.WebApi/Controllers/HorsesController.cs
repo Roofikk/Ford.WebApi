@@ -31,7 +31,7 @@ public class HorsesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> Get(long? horseId)
+    public async Task<ActionResult<HorseRetrievingDto[]>> Get(long? horseId)
     {
         if (!Request.Headers.TryGetValue("Authorization", out StringValues token))
         {
@@ -86,7 +86,7 @@ public class HorsesController : ControllerBase
         if (horses.Any())
         {
             IEnumerable<HorseRetrievingDto> horsesDto = mapper.Map<IEnumerable<HorseRetrievingDto>>(horses);
-            return Ok(horsesDto);
+            return horsesDto.ToArray();
         }
         else
         {
@@ -193,7 +193,7 @@ public class HorsesController : ControllerBase
     // Мдааа... Херни наворотил.
     [HttpPost]
     [Route("horseOwners")]
-    public async Task<ActionResult<Horse>> UpdateHorseOwnersAsync([FromBody] RequestUpdateHorseOwners requestHorseOwners)
+    public async Task<ActionResult<HorseRetrievingDto[]>> UpdateHorseOwnersAsync([FromBody] RequestUpdateHorseOwners requestHorseOwners)
     {
         if (!Request.Headers.TryGetValue("Authorization", out var token))
         {
@@ -216,11 +216,19 @@ public class HorsesController : ControllerBase
             return BadRequest("You do not have access to this object");
         }
 
-        //Check the possibility of granting role to an object
-        OwnerRole role = Enum.Parse<OwnerRole>(currentOwner.RuleAccess, true);
-        var check = requestHorseOwners.HorseOwners.Where(hw => Enum.Parse<OwnerRole>(hw.RuleAccess) > role - 1);
+        OwnerRole currentOwnerRole = Enum.Parse<OwnerRole>(currentOwner.RuleAccess, true);
 
-        if (check.Any())
+        //Check access to update
+        if (currentOwnerRole < OwnerRole.Write)
+        {
+            return BadRequest("Access denied");
+        }
+
+        //Find invalid access role to an object
+        var invalidRoles = requestHorseOwners.HorseOwners.Where(
+            hw => Enum.Parse<OwnerRole>(hw.RuleAccess) > currentOwnerRole - 1);
+
+        if (invalidRoles.Any())
         {
             return BadRequest("Some rules upper than you may provide");
         }
@@ -235,33 +243,29 @@ public class HorsesController : ControllerBase
 
         Collection<HorseOwner> newOwners = new();
 
-        if (requestHorseOwners.HorseOwners.FirstOrDefault(o => o.UserId == user.Id) is null)
-        {
-            newOwners.Add(new HorseOwner
-            {
-                UserId = user.Id,
-                HorseId = requestHorseOwners.HorseId
-            });
-        }
-
         foreach (var reqOwner in requestHorseOwners.HorseOwners)
         {
+            if (reqOwner.UserId == user.Id)
+                continue;
+
             newOwners.Add(new HorseOwner
             {
                 UserId = reqOwner.UserId,
-                HorseId = requestHorseOwners.HorseId
+                HorseId = requestHorseOwners.HorseId,
+                RuleAccess = reqOwner.RuleAccess
             });
         }
 
-        horse.HorseOwners = newOwners;
+        newOwners.Add(currentOwner);
 
+        horse.HorseOwners = newOwners;
         await db.SaveChangesAsync();
 
-        return horse;
+        return await Get(horse.HorseId);
     }
 
     [HttpPut]
-    public async Task<ActionResult<Horse>> UpdateAsync([FromBody] HorseForUpdateDto horse)
+    public async Task<ActionResult<HorseRetrievingDto[]>> UpdateAsync([FromBody] HorseForUpdateDto horse)
     {
         if (!Request.Headers.TryGetValue("Authorization", out var token))
         {
@@ -365,7 +369,7 @@ public class HorsesController : ControllerBase
 
         OwnerRole currentRole = Enum.Parse<OwnerRole>(owner.RuleAccess, true);
 
-        return needRole >= currentRole;
+        return currentRole >= needRole;
     }
 
     private async Task<bool?> CheckAccessToHorseAsync(long userId, long horseId, OwnerRole needRole)
