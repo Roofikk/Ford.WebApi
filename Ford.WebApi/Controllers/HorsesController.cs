@@ -10,6 +10,7 @@ using Microsoft.Extensions.Primitives;
 using Ford.WebApi.Models.Horse;
 using System.Collections.ObjectModel;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.Extensions.Hosting;
 
 namespace Ford.WebApi.Controllers;
 
@@ -45,29 +46,47 @@ public class HorsesController : ControllerBase
         }
 
         //Подумать над нормальной загрузкой!!!
-        IEnumerable<Horse> horses = db.Horses.Include(h => h.HorseOwners).ThenInclude(o => o.User)
-            .Where(h => h.HorseOwners.Any(u => u.UserId == user.Id));
+
+        IQueryable<Horse> horses;
+
+        if (horseId.HasValue)
+        {
+            horses = db.Horses.Where(h => h.HorseOwners.Any(u => u.UserId == user.Id) && h.HorseId == horseId);
+
+            if (!horses.Any())
+            {
+                return NotFound();
+            }
+        }
+        else
+        {
+            horses = db.Horses.Where(h => h.HorseOwners.Any(o => o.UserId == user.Id));
+        }
+
+
+        foreach (var horse in horses.AsEnumerable())
+        {
+            if (horse is null)
+            {
+                return NotFound();
+            }
+
+            CollectionEntry<Horse, HorseOwner> collection = db.Entry(horse).Collection(h => h.HorseOwners);
+            collection.Load();
+
+            if (collection.CurrentValue is not null)
+            {
+                foreach (var owner in collection.CurrentValue)
+                {
+                    db.Entry(owner).Reference(o => o.User).Load();
+                }
+            }
+        }
 
         if (horses.Any())
         {
-            if (horseId is not null)
-            {
-                Horse? horse = horses.FirstOrDefault(h => h.HorseId == horseId);
-
-                if (horse is null)
-                {
-                    return NotFound();
-                }
-
-                HorseRetrievingDto horseDto = mapper.Map<HorseRetrievingDto>(horse);
-                return Ok(horseDto);
-            }
-            else
-            {
-
-                IEnumerable<HorseRetrievingDto> horsesDto = mapper.Map<IEnumerable<HorseRetrievingDto>>(horses);
-                return Ok(horsesDto);
-            }
+            IEnumerable<HorseRetrievingDto> horsesDto = mapper.Map<IEnumerable<HorseRetrievingDto>>(horses);
+            return Ok(horsesDto);
         }
         else
         {
