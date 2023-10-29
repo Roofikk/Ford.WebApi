@@ -8,7 +8,6 @@ using Ford.WebApi.Dtos.User;
 using System.Security.Claims;
 using AutoMapper;
 using Ford.WebApi.Models.Identity;
-using System.Data.Entity.Infrastructure;
 
 namespace Ford.WebApi.Controllers;
 

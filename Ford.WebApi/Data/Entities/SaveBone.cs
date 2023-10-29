@@ -10,12 +10,12 @@ namespace Ford.WebApi.Data.Entities
         [Key]
         [Column(TypeName = "nvarchar(18)")]
         public string BoneId { get; set; } = null!;
-        public float? VectorRotationX { get; set; }
-        public float? VectorRotationY { get; set; }
-        public float? VectorRotationZ { get; set; }
-        public float? PositionVectorX { get; set; }
-        public float? PositionVectorY { get; set; }
-        public float? PositionVectorZ { get; set; }
+        public float? RotationX { get; set; }
+        public float? RotationY { get; set; }
+        public float? RotationZ { get; set; }
+        public float? PositionX { get; set; }
+        public float? PositionY { get; set; }
+        public float? PositionZ { get; set; }
 
         [ForeignKey("BoneId")]
         [InverseProperty("SaveBones")]

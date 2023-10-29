@@ -36,9 +36,6 @@ public class HorseProfiles : Profile
                 dest => dest.CreationDate,
                 opt => opt.MapFrom(src => src.CreationDate))
             .ForMember(
-                dest => dest.Saves,
-                opt => opt.MapFrom(src => src.Saves))
-            .ForMember(
                 dest => dest.Users,
                 opt => opt.MapFrom(src => src.HorseOwners));
 

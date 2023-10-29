@@ -12,7 +12,6 @@ namespace Ford.WebApi.Dtos.Horse
         public string? Region { get; set; }
         public string? Country { get; set; }
         public DateTime CreationDate { get; set; }
-        public IEnumerable<Save>? Saves { get; set; }
         public IEnumerable<OwnerDto>? Users { get; set; }
     }
 

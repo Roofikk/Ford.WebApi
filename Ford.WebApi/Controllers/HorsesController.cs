@@ -10,7 +10,6 @@ using Microsoft.Extensions.Primitives;
 using Ford.WebApi.Models.Horse;
 using System.Collections.ObjectModel;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.Extensions.Hosting;
 
 namespace Ford.WebApi.Controllers;
 
@@ -31,7 +30,7 @@ public class HorsesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<HorseRetrievingDto[]>> Get(long? horseId)
+    public async Task<ActionResult<HorseRetrievingDto[]>> Get()
     {
         if (!Request.Headers.TryGetValue("Authorization", out StringValues token))
         {
@@ -45,53 +44,74 @@ public class HorsesController : ControllerBase
             return BadRequest();
         }
 
-        //Подумать над нормальной загрузкой!!!
+        IEnumerable<Horse> horses = db.Horses.Where(h => h.HorseOwners.Any(o => o.UserId == user.Id))
+            .AsEnumerable();
 
-        IQueryable<Horse> horses;
-
-        if (horseId.HasValue)
+        if (!horses.Any())
         {
-            horses = db.Horses.Where(h => h.HorseOwners.Any(u => u.UserId == user.Id) && h.HorseId == horseId);
-
-            if (!horses.Any())
-            {
-                return NotFound();
-            }
+            return NotFound();
         }
         else
         {
-            horses = db.Horses.Where(h => h.HorseOwners.Any(o => o.UserId == user.Id));
-        }
-
-
-        foreach (var horse in horses.AsEnumerable())
-        {
-            if (horse is null)
+            foreach (var horse in horses)
             {
-                return NotFound();
-            }
-
-            CollectionEntry<Horse, HorseOwner> collection = db.Entry(horse).Collection(h => h.HorseOwners);
-            collection.Load();
-
-            if (collection.CurrentValue is not null)
-            {
-                foreach (var owner in collection.CurrentValue)
+                if (horse is null)
                 {
-                    db.Entry(owner).Reference(o => o.User).Load();
+                    return NotFound();
+                }
+
+                CollectionEntry<Horse, HorseOwner> collection = db.Entry(horse).Collection(h => h.HorseOwners);
+                collection.Load();
+
+                if (collection.CurrentValue is not null)
+                {
+                    foreach (var owner in collection.CurrentValue)
+                    {
+                        db.Entry(owner).Reference(o => o.User).Load();
+                    }
                 }
             }
-        }
 
-        if (horses.Any())
-        {
             IEnumerable<HorseRetrievingDto> horsesDto = mapper.Map<IEnumerable<HorseRetrievingDto>>(horses);
             return horsesDto.ToArray();
         }
-        else
+    }
+
+    [HttpGet("{horseId}")]
+    public async Task<ActionResult<HorseRetrievingDto>> Get(long horseId)
+    {
+        if (!Request.Headers.TryGetValue("Authorization", out StringValues token))
         {
-            return NoContent();
+            return Unauthorized();
         }
+
+        User? user = await tokenService.GetUserByToken(token);
+
+        if (user is null)
+        {
+            return BadRequest();
+        }
+
+        Horse? horse = db.Horses.SingleOrDefault(h => h.HorseOwners.Any(u => u.UserId == user.Id) && h.HorseId == horseId);
+
+        if (horse is null)
+        {
+            return NotFound();
+        }
+
+        CollectionEntry<Horse, HorseOwner> collection = db.Entry(horse).Collection(h => h.HorseOwners);
+        collection.Load();
+
+        if (collection.CurrentValue is not null)
+        {
+            foreach (var owner in collection.CurrentValue)
+            {
+                db.Entry(owner).Reference(o => o.User).Load();
+            }
+        }
+
+        HorseRetrievingDto horseDto = mapper.Map<HorseRetrievingDto>(horse);
+        return horseDto;
     }
 
     [HttpPost]
@@ -175,7 +195,7 @@ public class HorsesController : ControllerBase
         }
 
         db.Horses.Add(horseDto);
-        int number = db.SaveChanges();
+        int number = await db.SaveChangesAsync();
 
         if (number == (requestHorse.HorseOwners)?.Count() + 2)
         {
@@ -193,7 +213,7 @@ public class HorsesController : ControllerBase
     // Мдааа... Херни наворотил.
     [HttpPost]
     [Route("horseOwners")]
-    public async Task<ActionResult<HorseRetrievingDto[]>> UpdateHorseOwnersAsync([FromBody] RequestUpdateHorseOwners requestHorseOwners)
+    public async Task<ActionResult<HorseRetrievingDto>> UpdateHorseOwnersAsync([FromBody] RequestUpdateHorseOwners requestHorseOwners)
     {
         if (!Request.Headers.TryGetValue("Authorization", out var token))
         {
@@ -265,7 +285,7 @@ public class HorsesController : ControllerBase
     }
 
     [HttpPut]
-    public async Task<ActionResult<HorseRetrievingDto[]>> UpdateAsync([FromBody] HorseForUpdateDto horse)
+    public async Task<ActionResult<HorseRetrievingDto>> UpdateAsync([FromBody] HorseForUpdateDto horse)
     {
         if (!Request.Headers.TryGetValue("Authorization", out var token))
         {
