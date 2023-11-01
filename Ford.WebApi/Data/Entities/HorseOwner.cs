@@ -21,18 +21,6 @@ namespace Ford.WebApi.Data.Entities
         public virtual Horse Horse { get; set; } = null!;
     }
 
-    public class HorseRuleAccess
-    {
-        // Only read saves and other info about horse
-        public const string Read = "READ";
-        // Read/Write info about horse and add/edit other saves
-        public const string Write = "WRITE";
-        // Also add/remove other users to horse
-        public const string All = "ALL";
-        // Creation horse
-        public const string Owner = "OWNER";
-    }
-
     public enum OwnerRole
     {
         // Only read saves and other info about horse

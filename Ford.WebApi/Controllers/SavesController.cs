@@ -5,6 +5,7 @@ using Ford.WebApi.Dtos.Save;
 using Ford.WebApi.Models;
 using Ford.WebApi.Services.Identity;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
@@ -131,6 +132,7 @@ public class SavesController : ControllerBase
         Save save = new Save
         {
             Header = requestSave.Header,
+            Description = requestSave.Description,
             Date = requestSave.Date,
             Horse = horse,
         };
@@ -178,14 +180,111 @@ public class SavesController : ControllerBase
     // PUT api/<SavesController>/5
     // Update
     [HttpPut("{id}")]
-    public void Put(int id, [FromBody] string value)
+    public async Task<ActionResult<ResponseSaveDto>> Put(int id, [FromBody] RequestUpdateSaveDto requestSave)
     {
+        // get authorize user
+        User? user = await tokenService.GetUserByToken(Request.Headers["Authorization"]);
+
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == id);
+
+        if (save is null)
+        {
+            return NotFound();
+        }
+
+        // get horse by save
+        var horseReference = db.Entry(save).Reference(s => s.Horse);
+        await horseReference.LoadAsync();
+
+        if (!horseReference.IsLoaded)
+        {
+            return BadRequest();
+        }
+
+        // get owners by horse
+        var collection = db.Entry(horseReference.CurrentValue!).Collection(h => h.HorseOwners);
+        await collection.LoadAsync();
+
+        if (!collection.IsLoaded)
+        {
+            return BadRequest();
+        }
+
+        HorseOwner? owner = collection.CurrentValue!.SingleOrDefault(o => o.UserId == user.Id);
+
+        if (owner is null)
+        {
+            return BadRequest("You don't have access to the horse");
+        }
+
+        if (Enum.Parse<OwnerRole>(owner.RuleAccess) < OwnerRole.Write)
+        {
+            return BadRequest("You don't have access to the horse");
+        }
+
+        save.Header = requestSave.Header;
+        save.Description = requestSave.Description;
+        save.Date = requestSave.Date;
+
+        await db.SaveChangesAsync();
+        var saveDto = MapSave(save);
+        return saveDto;
     }
 
     // DELETE api/<SavesController>/5
     [HttpDelete("{id}")]
-    public void Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
+        User? user = await tokenService.GetUserByToken(Request.Headers["Authorization"]);
+
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == id);
+
+        if (save is null)
+        {
+            return NotFound();
+        }
+
+        var saveReference = db.Entry(save).Reference(s => s.Horse);
+        await saveReference.LoadAsync();
+
+        if (!saveReference.IsLoaded)
+        {
+            return BadRequest();
+        }
+
+        var collection = db.Entry(saveReference.CurrentValue!).Collection(h => h.HorseOwners);
+        await collection.LoadAsync();
+
+        if (!collection.IsLoaded)
+        {
+            return BadRequest();
+        }
+
+        HorseOwner? owner = collection.CurrentValue!.SingleOrDefault(o => o.UserId == user.Id);
+
+        if (owner is null)
+        {
+            return BadRequest("Owner not found");
+        }
+
+        if (Enum.Parse<OwnerRole>(owner.RuleAccess, true) < OwnerRole.Write)
+        {
+            return BadRequest("You don't have access to the action");
+        }
+
+        db.Remove(save);
+        await db.SaveChangesAsync();
+        return Ok();
     }
 
     private ResponseSaveDto MapSave(Save save)
@@ -194,7 +293,8 @@ public class SavesController : ControllerBase
         {
             HorseId = save.HorseId,
             SaveId = save.SaveId,
-            Header = save.Header ?? "Empty",
+            Header = save.Header,
+            Description = save.Description,
             Date = save.Date,
             Bones = new Collection<BoneDto>()
         };
