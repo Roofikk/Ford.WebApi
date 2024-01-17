@@ -6,6 +6,7 @@ namespace Ford.WebApi.Dtos.Horse
     {
         public long HorseId { get; set; }
         public string Name { get; set; } = null!;
+        public string? Description { get; set; }
         public DateTime? BirthDate { get; set; }
         public string Sex { get; set; } = Data.Entities.Sex.None.ToString();
         public string? City { get; set; }

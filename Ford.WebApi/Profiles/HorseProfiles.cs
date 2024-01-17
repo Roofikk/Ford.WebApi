@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.Horse;
-using Ford.WebApi.Models.Horse;
 using System.Collections.ObjectModel;
 
 namespace Ford.WebApi.Properties;
@@ -17,6 +16,9 @@ public class HorseProfiles : Profile
             .ForMember(
                 dest => dest.Name,
                 opt => opt.MapFrom(src => src.Name))
+            .ForMember(
+                dest => dest.Description,
+                opt => opt.MapFrom(src => src.Description))
             .ForMember(
                 dest => dest.BirthDate,
                 opt => opt.MapFrom(src => src.BirthDate))
@@ -69,6 +71,9 @@ public class HorseProfiles : Profile
                 dest => dest.Name,
                 opt => opt.MapFrom(src => src.Name))
             .ForMember(
+                dest => dest.Description,
+                opt => opt.MapFrom(src => src.Description))
+            .ForMember(
                 dest => dest.BirthDate,
                 opt => opt.MapFrom(src => src.BirthDate))
             .ForMember(
@@ -100,6 +105,9 @@ public class HorseProfiles : Profile
             .ForMember(
                 dest => dest.Name,
                 opt => opt.MapFrom(src => src.Name))
+            .ForMember(
+                dest => dest.Description,
+                opt => opt.MapFrom(src => src.Description))
             .ForMember(
                 dest => dest.BirthDate,
                 opt => opt.MapFrom(src => src.BirthDate))

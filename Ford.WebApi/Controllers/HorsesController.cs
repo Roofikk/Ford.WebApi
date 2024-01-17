@@ -232,7 +232,7 @@ public class HorsesController : ControllerBase
         OwnerRole currentOwnerRole = Enum.Parse<OwnerRole>(currentOwner.RuleAccess, true);
 
         //Check access to update
-        if (currentOwnerRole < OwnerRole.Write)
+        if (currentOwnerRole < OwnerRole.All)
         {
             return BadRequest("Access denied");
         }
@@ -328,11 +328,7 @@ public class HorsesController : ControllerBase
     [HttpDelete]
     public async Task<IActionResult> DeleteAsync(long id)
     {
-        if (!Request.Headers.TryGetValue("Authorization", out var token))
-        {
-            return Unauthorized();
-        }
-
+        string token = Request.Headers["Authorization"];
         User? user = await tokenService.GetUserByToken(token);
 
         if (user is null)
@@ -340,29 +336,40 @@ public class HorsesController : ControllerBase
             return Unauthorized();
         }
 
-        Horse? horse = await db.Horses.Include(h => h.HorseOwners)
-            .FirstOrDefaultAsync(h => h.HorseId == id);
-
-        if (horse is null)
-        {
-            return NotFound();
-        }
-
-        HorseOwner? owner = horse.HorseOwners.SingleOrDefault(o => o.UserId == user.Id);
+        HorseOwner? owner = db.HorseOwners.SingleOrDefault(o => o.UserId == user.Id && o.HorseId == id);
 
         if (owner is null)
         {
-            return BadRequest("Horse not found in your list");
+            return BadRequest("The horse wasn't found or you don't have access to it");
         }
 
-        if (Enum.Parse<OwnerRole>(owner.RuleAccess, true) != OwnerRole.Creator)
+        if (Enum.Parse<OwnerRole>(owner.RuleAccess, true) == OwnerRole.Creator)
         {
-            return BadRequest("Access denied");
-        }
+            var referenceHorse = db.Entry(owner).Reference(o => o.Horse);
+            await referenceHorse.LoadAsync();
 
-        db.Remove(horse);
-        await db.SaveChangesAsync();
-        return Ok();
+            if (!referenceHorse.IsLoaded)
+            {
+                return BadRequest();
+            }
+
+            Horse? horse = referenceHorse.CurrentValue;
+
+            if (horse is null)
+            {
+                return BadRequest();
+            }
+
+            db.Remove(horse);
+            await db.SaveChangesAsync();
+            return Ok();
+        }
+        else
+        {
+            db.Remove(owner);
+            await db.SaveChangesAsync();
+            return Ok();
+        }
     }
 
     private async Task<HorseOwner?> GetHorseOwnerAsync(long userId, long horseId)

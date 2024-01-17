@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
 namespace Ford.WebApi.Data.Entities
 {
@@ -19,6 +16,8 @@ namespace Ford.WebApi.Data.Entities
         public long HorseId { get; set; }
         [Column(TypeName = "ncarchar(30)")]
         public string Name { get; set; }
+        [Column(TypeName = "TEXT")]
+        public string? Description { get; set; }
         [Column(TypeName = "datetime")]
         public DateTime? BirthDate { get; set; }
         [Column(TypeName = "nvarchar(6)")]
