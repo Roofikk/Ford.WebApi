@@ -18,7 +18,9 @@ namespace Ford.WebApi.Data.Entities
         public long SaveId { get; set; }
         public long HorseId { get; set; }
         [Column(TypeName = "nvarchar(30)")]
-        public string? Header { get; set; }
+        public string Header { get; set; }
+        [Column(TypeName = "TEXT")]
+        public string? Description {  get; set; }
         [Column(TypeName = "datetime")]
         public DateTime? Date { get; set; }
 

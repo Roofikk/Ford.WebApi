@@ -195,17 +195,10 @@ public class HorsesController : ControllerBase
         }
 
         db.Horses.Add(horseDto);
-        int number = await db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
-        if (number == (requestHorse.HorseOwners)?.Count() + 2)
-        {
-            var horseRetrieving = mapper.Map<HorseRetrievingDto>(horseDto);
-            return Created($"api/[controller]?horseId={horseDto.HorseId}", horseRetrieving);
-        }
-        else
-        {
-            return BadRequest("Save failed");
-        }
+        var horseRetrieving = mapper.Map<HorseRetrievingDto>(horseDto);
+        return Created($"api/[controller]?horseId={horseDto.HorseId}", horseRetrieving);
     }
 
     // Не доделал. Надо же еще удалить прошлые, которые не были включены в список!

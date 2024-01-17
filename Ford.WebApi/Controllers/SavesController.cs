@@ -178,8 +178,21 @@ public class SavesController : ControllerBase
     // PUT api/<SavesController>/5
     // Update
     [HttpPut("{id}")]
-    public void Put(int id, [FromBody] string value)
+    public async Task<ActionResult<ResponseSaveDto>> Put(int id, [FromBody] RequestCreateSaveDto requestSave)
     {
+        Save? save = await db.Saves.FirstOrDefaultAsync(s => s.SaveId == id);
+
+        if (save is null)
+        {
+            return NotFound(requestSave);
+        }
+
+        save.Header = requestSave.Header;
+        save.Description = requestSave.Description;
+        save.Date = requestSave.Date;
+
+        await db.SaveChangesAsync();
+        return Ok(MapSave(save));
     }
 
     // DELETE api/<SavesController>/5
