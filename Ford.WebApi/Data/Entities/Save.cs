@@ -14,6 +14,7 @@ public partial class Save
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long SaveId { get; set; }
     public long HorseId { get; set; }
+    public long UserId { get; set; }
     [Column(TypeName = "nvarchar(30)")]
     public string Header { get; set; }
     [Column(TypeName = "TEXT")]
@@ -24,6 +25,9 @@ public partial class Save
     [ForeignKey("HorseId")]
     [InverseProperty("Saves")]
     public virtual Horse Horse { get; set; }
+    [ForeignKey("UserId")]
+    [InverseProperty("Saves")]
+    public virtual User User { get; set; }
     [InverseProperty("Save")]
     public virtual ICollection<SaveBone> SaveBones { get; set; }
 }

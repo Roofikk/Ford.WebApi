@@ -29,5 +29,6 @@ namespace Ford.WebApi.Data.Entities
 
         [InverseProperty("User")]
         public virtual ICollection<HorseOwner> HorseOwners { get; set; }
+        public virtual ICollection<Save> Saves { get; set; }
     }
 }

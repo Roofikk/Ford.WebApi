@@ -86,7 +86,6 @@ builder.Services.AddSwaggerGen(opts =>
 });
 
 builder.Services.AddScoped<IRepository<User, long>, UserRepository>();
-builder.Services.AddScoped<IRepository<Horse, long>, HorseRepository>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 

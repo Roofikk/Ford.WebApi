@@ -45,6 +45,8 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
 
         modelBuilder.Entity<HorseOwner>(entity =>
         {
+            entity.ToTable("HorseOwners");
+
             entity.HasKey(e => new { e.UserId, e.HorseId, });
 
             entity.HasOne(d => d.User)
