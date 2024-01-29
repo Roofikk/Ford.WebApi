@@ -81,7 +81,7 @@ public class IdentityController : ControllerBase
     [Route("login")]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] UserLogin request)
     {
-        User managedUser = await userManager.FindByNameAsync(request.Login);
+        User? managedUser = await userManager.FindByNameAsync(request.Login);
 
         if (managedUser is null)
         {

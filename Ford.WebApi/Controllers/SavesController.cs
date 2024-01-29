@@ -9,8 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-
 namespace Ford.WebApi.Controllers;
 
 [Authorize]
@@ -19,13 +17,11 @@ namespace Ford.WebApi.Controllers;
 public class SavesController : ControllerBase
 {
     private readonly FordContext db;
-    private readonly IMapper mapper;
     private readonly ITokenService tokenService;
 
-    public SavesController(FordContext db, IMapper mapper, ITokenService tokenService)
+    public SavesController(FordContext db, ITokenService tokenService)
     {
         this.db = db;
-        this.mapper = mapper;
         this.tokenService = tokenService;
     }
 
@@ -95,7 +91,7 @@ public class SavesController : ControllerBase
     public async Task<ActionResult<ResponseSaveDto>> Post([FromRoute] long horseId, [FromBody] RequestCreateSaveDto requestSave)
     {
         // get authorize user
-        User? user = await tokenService.GetUserByToken(Request.Headers["Authorization"]);
+        User? user = await tokenService.GetUserByToken(Request.Headers.Authorization);
 
         if (user is null)
         {
@@ -133,45 +129,70 @@ public class SavesController : ControllerBase
             Header = requestSave.Header,
             Description = requestSave.Description,
             Date = requestSave.Date,
+            User = user,
             Horse = horse,
         };
 
-        IEnumerable<Bone> bones = db.Bones.AsEnumerable();
+        ICollection<SaveBone> saveBones = new Collection<SaveBone>();
 
-        foreach (var rb in requestSave.Bones)
+        foreach (var bone in requestSave.Bones)
         {
-            Bone? bone = bones.FirstOrDefault(b => b.BoneId == rb.BoneId);
-
-            bone ??= new Bone
+            saveBones.Add(new SaveBone
+            {
+                Bone = new Bone
                 {
-                    BoneId = rb.BoneId,
-                    GroupId = rb.GroupId,
-                    Name = rb.Name,
-                };
-
-            if (rb.Position is null && rb.Rotation is null)
-            {
-                continue;
-            }
-
-            if (rb.Position!.Magnitude < 0.0001f && rb.Rotation!.Magnitude < 0.0001f)
-            {
-                continue;
-            }
-
-            db.SaveBones.Add(new SaveBone()
-            {
-                Bone = bone,
-                Save = save,
-                PositionX = rb.Position?.X,
-                PositionY = rb.Position?.Y,
-                PositionZ = rb.Position?.Z,
-                RotationX = rb.Rotation?.X,
-                RotationY = rb.Rotation?.Y,
-                RotationZ = rb.Rotation?.Z,
+                    BoneId = bone.BoneId,
+                    Name = bone.Name,
+                    GroupId = bone.GroupId
+                },
+                PositionX = bone.Position?.X,
+                PositionY = bone.Position?.Y,
+                PositionZ = bone.Position?.Z,
+                RotationX = bone.Rotation?.X,
+                RotationY = bone.Rotation?.Y,
+                RotationZ = bone.Rotation?.Z,
             });
         }
 
+        save.SaveBones = saveBones;
+
+        //IEnumerable<Bone> bones = db.Bones.AsEnumerable();
+
+        //foreach (var rb in requestSave.Bones)
+        //{
+        //    Bone? bone = bones.FirstOrDefault(b => b.BoneId == rb.BoneId);
+
+        //    bone ??= new Bone
+        //        {
+        //            BoneId = rb.BoneId,
+        //            GroupId = rb.GroupId,
+        //            Name = rb.Name,
+        //        };
+
+        //    if (rb.Position is null && rb.Rotation is null)
+        //    {
+        //        continue;
+        //    }
+
+        //    if (rb.Position!.Magnitude < 0.0001f && rb.Rotation!.Magnitude < 0.0001f)
+        //    {
+        //        continue;
+        //    }
+
+        //    db.SaveBones.Add(new SaveBone()
+        //    {
+        //        Bone = bone,
+        //        Save = save,
+        //        PositionX = rb.Position?.X,
+        //        PositionY = rb.Position?.Y,
+        //        PositionZ = rb.Position?.Z,
+        //        RotationX = rb.Rotation?.X,
+        //        RotationY = rb.Rotation?.Y,
+        //        RotationZ = rb.Rotation?.Z,
+        //    });
+        //}
+
+        await db.Saves.AddAsync(save);
         await db.SaveChangesAsync();
         return Created($"api/[controller]/{horseId}/{save.SaveId}", MapSave(save));
     }
@@ -253,6 +274,7 @@ public class SavesController : ControllerBase
             return NotFound();
         }
 
+        // check access
         var saveReference = db.Entry(save).Reference(s => s.Horse);
         await saveReference.LoadAsync();
 
