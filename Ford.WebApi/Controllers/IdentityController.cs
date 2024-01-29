@@ -11,7 +11,6 @@ using Ford.WebApi.Models.Identity;
 
 namespace Ford.WebApi.Controllers;
 
-[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class IdentityController : ControllerBase
@@ -31,7 +30,6 @@ public class IdentityController : ControllerBase
         this.mapper = mapper;
     }
 
-    [AllowAnonymous]
     [HttpPost]
     [Route("register")]
     public async Task<ActionResult<UserGettingDto>> Register([FromBody] UserRegister request)
@@ -76,7 +74,6 @@ public class IdentityController : ControllerBase
         return userDto;
     }
 
-    [AllowAnonymous]
     [HttpPost]
     [Route("login")]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] UserLogin request)
@@ -142,6 +139,7 @@ public class IdentityController : ControllerBase
         return userDto;
     }
 
+    [Authorize]
     [HttpPost]
     [Route("/api/account")]
     public async Task<ActionResult<UserGettingDto>> Update([FromBody] UpdateUserRequest request)
@@ -184,6 +182,7 @@ public class IdentityController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpPost]
     [Route("/api/account/password")]
     public async Task<ActionResult<AuthResponse>> ChangePassword([FromBody] RequestChangePassword request)

@@ -1,7 +1,8 @@
 ﻿using Ford.WebApi.Data.Entities;
+using Ford.WebApi.Extensions.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Pathnostics.Web.Extensions;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -10,20 +11,20 @@ namespace Ford.WebApi.Services.Identity;
 
 public class TokenService : ITokenService
 {
-    private readonly IConfiguration configuration;
+    private readonly JwtSettings _jwtSettings;
     private readonly UserManager<User> userManager;
 
-    public TokenService(IConfiguration configuration, UserManager<User> userManager)
+    public TokenService(IOptions<JwtSettings> jwtSettings, UserManager<User> userManager)
     {
-        this.configuration = configuration;
+        _jwtSettings = jwtSettings.Value;
         this.userManager = userManager;
     }
 
     public string GenerateToken(User user, List<IdentityRole<long>> roles, TimeSpan tokenLifeTime)
     {
-        var issuer = configuration["Jwt:Issuer"];
-        var audience = configuration["Jwt:Audience"];
-        var key = Encoding.ASCII.GetBytes(configuration["Jwt:Key"]);
+        var issuer = _jwtSettings.Issuer;
+        var audience = _jwtSettings.Audience;
+        var key = Encoding.ASCII.GetBytes(_jwtSettings.Key);
 
         return user.CreateClaims(roles).CreateToken(issuer, audience, key, tokenLifeTime);
     }
@@ -32,10 +33,10 @@ public class TokenService : ITokenService
     {
         var tokenValidationParameters = new TokenValidationParameters
         {
-            ValidateAudience = false,
-            ValidateIssuer = false,
+            ValidateAudience = true,
+            ValidateIssuer = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key)),
             ValidateLifetime = true
         };
 

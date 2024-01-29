@@ -10,6 +10,9 @@ using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using Ford.WebApi.Extensions;
 using Ford.WebApi.Services.Identity;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Options;
+using Ford.WebApi.Extensions.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,28 +23,36 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(options =>
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+    .AddScheme<JwtBearerOptions, JwtBearerHandler>(JwtBearerDefaults.AuthenticationScheme, options =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        { 
-            ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+        var jwtSetting = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+
+        if (jwtSetting is null)
+        {
+            throw new ArgumentNullException(nameof(jwtSetting));
+        }
+
+        options.SaveToken = true;
+        options.TokenValidationParameters = new()
+        {
+            ValidIssuer = jwtSetting.Issuer,
+            ValidAudience = jwtSetting.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting.Key)),
             ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                builder.Configuration["Jwt:Key"]))
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true
         };
     });
+
 builder.Services.AddAuthorization(opts =>
 {
-    opts.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
-        .RequireAuthenticatedUser()
-        .Build();
+    //opts.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+    //    .RequireAuthenticatedUser()
+    //    .Build();
 });
 
 builder.Services.AddIdentity<User, IdentityRole<long>>(opts =>
@@ -60,14 +71,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(opts =>
 {
     opts.SwaggerDoc("v1", new OpenApiInfo { Title = "Ford", Version = "v1" });
-    opts.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    opts.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
         Description = "Please enter a valid token",
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
         BearerFormat = "JWT",
-        Scheme = "Bearer"
+        Scheme = JwtBearerDefaults.AuthenticationScheme
     });
     opts.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -77,10 +88,10 @@ builder.Services.AddSwaggerGen(opts =>
                 Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
+                    Id = JwtBearerDefaults.AuthenticationScheme
                 }
             },
-            new string[] {}
+            Array.Empty<string>()
         }
     });
 });
@@ -88,6 +99,10 @@ builder.Services.AddSwaggerGen(opts =>
 builder.Services.AddScoped<IRepository<User, long>, UserRepository>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+
+builder.Services.AddOptions<JwtSettings>()
+    .Bind(builder.Configuration.GetSection("Jwt"))
+    .ValidateDataAnnotations();
 
 var app = builder.Build();
 

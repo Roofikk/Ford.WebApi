@@ -5,29 +5,28 @@ using System.Security.Cryptography;
 using System.Text;
 using Ford.WebApi.Data.Entities;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
 using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
 
-namespace Pathnostics.Web.Extensions;
+namespace Ford.WebApi.Extensions.Authentication;
 
 public static class JwtBearerExtensions
 {
     public static List<Claim> CreateClaims(this User user, List<IdentityRole<long>> roles)
     {
-        List<Claim> claims = new List<Claim>
-        {
+        List<Claim> claims =
+        [
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new (JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
             new (ClaimTypes.NameIdentifier, user.Id.ToString()),
             new (ClaimTypes.Email, user.Email!),
-            new (ClaimTypes.Name, user.UserName),
+            new (ClaimTypes.Name, user.UserName!),
             new (ClaimTypes.Role, string.Join(",", roles.Select(r => r.Name)))
-        };
+        ];
         return claims;
     }
-    
-    public static string CreateToken(this List<Claim> claims, string? issuer, 
+
+    public static string CreateToken(this List<Claim> claims, string? issuer,
         string? audience, byte[] key, TimeSpan tokenLifeTime)
     {
         var securityToken = new JwtSecurityToken
