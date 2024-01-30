@@ -10,6 +10,7 @@ using Microsoft.Extensions.Primitives;
 using Ford.WebApi.Models.Horse;
 using System.Collections.ObjectModel;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Ford.WebApi.Controllers;
 
@@ -41,7 +42,7 @@ public class HorsesController : ControllerBase
 
         if (user is null)
         {
-            return BadRequest();
+            return Unauthorized();
         }
 
         IEnumerable<Horse> horses = db.Horses.Where(h => h.HorseOwners.Any(o => o.UserId == user.Id))
@@ -49,17 +50,12 @@ public class HorsesController : ControllerBase
 
         if (!horses.Any())
         {
-            return NotFound();
+            return Ok(new List<HorseRetrievingDto>());
         }
         else
         {
             foreach (var horse in horses)
             {
-                if (horse is null)
-                {
-                    return NotFound();
-                }
-
                 CollectionEntry<Horse, HorseOwner> collection = db.Entry(horse).Collection(h => h.HorseOwners);
                 collection.Load();
 
