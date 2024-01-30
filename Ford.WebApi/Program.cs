@@ -10,8 +10,6 @@ using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using Ford.WebApi.Extensions;
 using Ford.WebApi.Services.Identity;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Options;
 using Ford.WebApi.Extensions.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +23,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 })
     .AddScheme<JwtBearerOptions, JwtBearerHandler>(JwtBearerDefaults.AuthenticationScheme, options =>
     {
@@ -41,18 +40,18 @@ builder.Services.AddAuthentication(options =>
             ValidIssuer = jwtSetting.Issuer,
             ValidAudience = jwtSetting.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSetting.Key)),
-            ValidateLifetime = true,
             ValidateIssuer = true,
             ValidateAudience = true,
+            ValidateLifetime = true,
             ValidateIssuerSigningKey = true
         };
     });
 
 builder.Services.AddAuthorization(opts =>
 {
-    //opts.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
-    //    .RequireAuthenticatedUser()
-    //    .Build();
+    opts.DefaultPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .Build();
 });
 
 builder.Services.AddIdentity<User, IdentityRole<long>>(opts =>

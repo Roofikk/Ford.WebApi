@@ -114,6 +114,14 @@ public class IdentityController : ControllerBase
         };
     }
 
+    [Authorize]
+    [HttpGet]
+    [Route("/check")]
+    public IActionResult CheckAuth()
+    {
+        return Ok();
+    }
+
     [HttpGet]
     [Route("/api/account")]
     public async Task<ActionResult<UserGettingDto>> GetUserInfo()

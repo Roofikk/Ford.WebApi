@@ -17,12 +17,12 @@ public static class JwtBearerExtensions
         List<Claim> claims =
         [
             new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new (JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
             new (ClaimTypes.NameIdentifier, user.Id.ToString()),
             new (ClaimTypes.Email, user.Email!),
             new (ClaimTypes.Name, user.UserName!),
             new (ClaimTypes.Role, string.Join(",", roles.Select(r => r.Name)))
         ];
+
         return claims;
     }
 
