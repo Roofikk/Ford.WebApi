@@ -116,7 +116,7 @@ public class IdentityController : ControllerBase
 
     [Authorize]
     [HttpGet]
-    [Route("/check")]
+    [Route("check")]
     public IActionResult CheckAuth()
     {
         return Ok();

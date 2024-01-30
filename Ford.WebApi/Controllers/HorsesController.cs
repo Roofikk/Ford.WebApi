@@ -10,7 +10,7 @@ using Microsoft.Extensions.Primitives;
 using Ford.WebApi.Models.Horse;
 using System.Collections.ObjectModel;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.AspNetCore.Http.HttpResults;
+using Ford.WebApi.DTOs.Outgoing;
 
 namespace Ford.WebApi.Controllers;
 
@@ -31,7 +31,7 @@ public class HorsesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<HorseRetrievingDto[]>> Get()
+    public async Task<ActionResult<RetrieveArray<HorseRetrievingDto>>> Get()
     {
         if (!Request.Headers.TryGetValue("Authorization", out StringValues token))
         {
@@ -50,7 +50,7 @@ public class HorsesController : ControllerBase
 
         if (!horses.Any())
         {
-            return Ok(new List<HorseRetrievingDto>());
+            return Ok(new RetrieveArray<HorseRetrievingDto>());
         }
         else
         {
@@ -69,7 +69,7 @@ public class HorsesController : ControllerBase
             }
 
             IEnumerable<HorseRetrievingDto> horsesDto = mapper.Map<IEnumerable<HorseRetrievingDto>>(horses);
-            return horsesDto.ToArray();
+            return new RetrieveArray<HorseRetrievingDto>(horsesDto.ToArray());
         }
     }
 

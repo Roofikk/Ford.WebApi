@@ -103,7 +103,7 @@ public class SavesController : ControllerBase
             return BadRequest("Save object can not have empty list bones");
         }
 
-        HorseOwner? owner = await db.HorseOwners.FirstOrDefaultAsync(o => o.UserId == user.Id && o.HorseId == horseId);
+        HorseOwner? owner = await db.HorseOwners.SingleOrDefaultAsync(o => o.UserId == user.Id && o.HorseId == horseId);
 
         if (owner is null)
         {
@@ -117,7 +117,9 @@ public class SavesController : ControllerBase
             return BadRequest("No access to this action with the specified parameters");
         }
 
-        Horse? horse = db.Entry(owner).Reference(o => o.Horse).CurrentValue;
+        var reference = db.Entry(owner).Reference(o => o.Horse);
+        reference.Load();
+        Horse? horse = reference.CurrentValue;
 
         if (horse is null)
         {
@@ -192,6 +194,7 @@ public class SavesController : ControllerBase
         //    });
         //}
 
+        db.UpdateRange(save.SaveBones);
         await db.Saves.AddAsync(save);
         await db.SaveChangesAsync();
         return Created($"api/[controller]/{horseId}/{save.SaveId}", MapSave(save));

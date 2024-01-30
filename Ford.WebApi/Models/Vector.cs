@@ -1,4 +1,7 @@
-﻿namespace Ford.WebApi.Models;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
+
+namespace Ford.WebApi.Models;
 
 public class Vector
 {
@@ -6,6 +9,7 @@ public class Vector
     public float Y { get; set; }
     public float Z { get; set; }
 
+    [JsonIgnore]
     public float Magnitude
     {
         get
