@@ -63,7 +63,9 @@ builder.Services.AddIdentity<User, IdentityRole<long>>(opts =>
     opts.Password.RequireNonAlphanumeric = false;
 }).AddEntityFrameworkStores<FordContext>()
     .AddUserManager<UserManager<User>>()
-    .AddSignInManager<SignInManager<User>>();
+    .AddSignInManager<SignInManager<User>>()
+    .AddRoles<IdentityRole<long>>()
+    .AddRoleManager<RoleManager<IdentityRole<long>>>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

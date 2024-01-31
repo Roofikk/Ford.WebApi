@@ -17,16 +17,19 @@ public class IdentityController : ControllerBase
 {
     private readonly FordContext db;
     private readonly UserManager<User> userManager;
+    private readonly RoleManager<IdentityRole<long>> roleManager;
     private readonly ITokenService tokenService;
     private readonly IMapper mapper;
 
     private static readonly TimeSpan tokenLifeTime = TimeSpan.FromDays(14);
 
-    public IdentityController(FordContext db, ITokenService tokenService, UserManager<User> userManager, IMapper mapper)
+    public IdentityController(FordContext db, ITokenService tokenService, UserManager<User> userManager,
+        RoleManager<IdentityRole<long>> roleManager, IMapper mapper)
     {
         this.db = db;
         this.tokenService = tokenService;
         this.userManager = userManager;
+        this.roleManager = roleManager;
         this.mapper = mapper;
     }
 
@@ -49,6 +52,7 @@ public class IdentityController : ControllerBase
             CreationDate = DateTime.Now,
             LastUpdatedDate = DateTime.Now
         };
+
         IdentityResult result = await userManager.CreateAsync(user, request.Password);
 
         foreach (var error in result.Errors)
@@ -58,17 +62,20 @@ public class IdentityController : ControllerBase
         
         if (!result.Succeeded)
         {
-            return BadRequest(request);
+            return BadRequest(ModelState.Select(e => e.Value.Errors).ToArray());
         }
 
-        var findUser = db.Users.FirstOrDefault(u => u.UserName == request.Login);
+        var findUser = db.Users.FirstOrDefault(u => u.UserName == request.Login) 
+            ?? throw new Exception($"User {request.Email} not found");
 
-        if (findUser == null)
+        var memberRoleIdentity = await roleManager.FindByNameAsync(Roles.Member);
+
+        if (memberRoleIdentity == null)
         {
-            throw new Exception($"User {request.Email} not found");
+            await roleManager.CreateAsync(new IdentityRole<long>(Roles.Member));
         }
 
-        await userManager.AddToRoleAsync(findUser, Roles.Member);
+        await userManager.AddToRoleAsync(findUser, memberRoleIdentity.Name);
         var userDto = mapper.Map<UserGettingDto>(user);
 
         return userDto;
