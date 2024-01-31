@@ -15,6 +15,7 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
         : base(options)
     {
         //Database.EnsureDeleted();
+        //Database.EnsureCreated();
     }
 
     public virtual DbSet<Horse> Horses { get; set; } = null!;

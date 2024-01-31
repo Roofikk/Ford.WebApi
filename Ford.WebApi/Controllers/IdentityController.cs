@@ -68,14 +68,14 @@ public class IdentityController : ControllerBase
         var findUser = db.Users.FirstOrDefault(u => u.UserName == request.Login) 
             ?? throw new Exception($"User {request.Email} not found");
 
-        var memberRoleIdentity = await roleManager.FindByNameAsync(Roles.Member);
+        IdentityRole<long>? memberRoleIdentity = await roleManager.FindByNameAsync(Roles.Member);
 
         if (memberRoleIdentity == null)
         {
-            await roleManager.CreateAsync(new IdentityRole<long>(Roles.Member));
+            var createdRoleResult = await roleManager.CreateAsync(new IdentityRole<long>(Roles.Member));
         }
 
-        await userManager.AddToRoleAsync(findUser, memberRoleIdentity.Name);
+        await userManager.AddToRoleAsync(findUser, Roles.Member);
         var userDto = mapper.Map<UserGettingDto>(user);
 
         return userDto;
