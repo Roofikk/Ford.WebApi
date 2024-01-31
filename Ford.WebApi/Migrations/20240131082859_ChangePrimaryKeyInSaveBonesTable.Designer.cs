@@ -11,31 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Ford.WebApi.Migrations
 {
     [DbContext(typeof(FordContext))]
-    [Migration("20240118131751_UserSaveMigration")]
-    partial class UserSaveMigration
+    [Migration("20240131082859_ChangePrimaryKeyInSaveBonesTable")]
+    partial class ChangePrimaryKeyInSaveBonesTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.1");
-
-            modelBuilder.Entity("Ford.WebApi.Data.Entities.Bone", b =>
-                {
-                    b.Property<string>("BoneId")
-                        .HasColumnType("nvarchar(18)");
-
-                    b.Property<string>("GroupId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(18)");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("nvarchar(60)");
-
-                    b.HasKey("BoneId");
-
-                    b.ToTable("Bones");
-                });
 
             modelBuilder.Entity("Ford.WebApi.Data.Entities.Horse", b =>
                 {
@@ -129,6 +112,7 @@ namespace Ford.WebApi.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("BoneId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(18)");
 
                     b.Property<float?>("PositionX")
@@ -149,9 +133,7 @@ namespace Ford.WebApi.Migrations
                     b.Property<float?>("RotationZ")
                         .HasColumnType("REAL");
 
-                    b.HasKey("SaveId", "BoneId");
-
-                    b.HasIndex("BoneId");
+                    b.HasKey("SaveId");
 
                     b.ToTable("SaveBones");
                 });
@@ -412,19 +394,11 @@ namespace Ford.WebApi.Migrations
 
             modelBuilder.Entity("Ford.WebApi.Data.Entities.SaveBone", b =>
                 {
-                    b.HasOne("Ford.WebApi.Data.Entities.Bone", "Bone")
-                        .WithMany("SaveBones")
-                        .HasForeignKey("BoneId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .IsRequired();
-
                     b.HasOne("Ford.WebApi.Data.Entities.Save", "Save")
                         .WithMany("SaveBones")
                         .HasForeignKey("SaveId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .IsRequired();
-
-                    b.Navigation("Bone");
 
                     b.Navigation("Save");
                 });
@@ -478,11 +452,6 @@ namespace Ford.WebApi.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Ford.WebApi.Data.Entities.Bone", b =>
-                {
-                    b.Navigation("SaveBones");
                 });
 
             modelBuilder.Entity("Ford.WebApi.Data.Entities.Horse", b =>

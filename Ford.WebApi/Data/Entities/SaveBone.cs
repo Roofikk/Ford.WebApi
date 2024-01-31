@@ -7,7 +7,6 @@ namespace Ford.WebApi.Data.Entities
     {
         [Key]
         public long SaveId { get; set; }
-        [Key]
         [Column(TypeName = "nvarchar(18)")]
         public string BoneId { get; set; } = null!;
         public float? RotationX { get; set; }
@@ -17,9 +16,6 @@ namespace Ford.WebApi.Data.Entities
         public float? PositionY { get; set; }
         public float? PositionZ { get; set; }
 
-        [ForeignKey("BoneId")]
-        [InverseProperty("SaveBones")]
-        public virtual Bone Bone { get; set; } = null!;
         [ForeignKey("SaveId")]
         [InverseProperty("SaveBones")]
         public virtual Save Save { get; set; } = null!;
