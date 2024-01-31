@@ -5,15 +5,18 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Ford.WebApi.Migrations
 {
+    /// <inheritdoc />
     public partial class InitialCreate : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "TEXT", nullable: true)
@@ -27,7 +30,16 @@ namespace Ford.WebApi.Migrations
                 name: "AspNetUsers",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    FirstName = table.Column<string>(type: "nvarchar(20)", nullable: false),
+                    LastName = table.Column<string>(type: "nvarchar(20)", nullable: true),
+                    City = table.Column<string>(type: "nvarchar(25)", nullable: true),
+                    Region = table.Column<string>(type: "nvarchar(25)", nullable: true),
+                    Country = table.Column<string>(type: "nvarchar(25)", nullable: true),
+                    BirthDate = table.Column<DateTime>(type: "datetime", nullable: true),
+                    CreationDate = table.Column<DateTime>(type: "datetime", nullable: false),
+                    LastUpdatedDate = table.Column<DateTime>(type: "datetime", nullable: false),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -41,34 +53,11 @@ namespace Ford.WebApi.Migrations
                     TwoFactorEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     LockoutEnd = table.Column<DateTimeOffset>(type: "TEXT", nullable: true),
                     LockoutEnabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "INTEGER", nullable: false),
-                    Discriminator = table.Column<string>(type: "TEXT", nullable: false),
-                    FirstName = table.Column<string>(type: "nvarchar(20)", nullable: true),
-                    LastName = table.Column<string>(type: "nvarchar(20)", nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(24)", nullable: true),
-                    City = table.Column<string>(type: "nvarchar(25)", nullable: true),
-                    Region = table.Column<string>(type: "nvarchar(25)", nullable: true),
-                    Country = table.Column<string>(type: "nvarchar(25)", nullable: true),
-                    BirthDate = table.Column<DateTime>(type: "datetime", nullable: true),
-                    CreationDate = table.Column<DateTime>(type: "datetime", nullable: true),
-                    LastUpdatedDate = table.Column<DateTime>(type: "datetime", nullable: true)
+                    AccessFailedCount = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Bones",
-                columns: table => new
-                {
-                    BoneId = table.Column<string>(type: "nvarchar(18)", nullable: false),
-                    GroupId = table.Column<string>(type: "nvarchar(18)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(60)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Bones", x => x.BoneId);
                 });
 
             migrationBuilder.CreateTable(
@@ -78,8 +67,9 @@ namespace Ford.WebApi.Migrations
                     HorseId = table.Column<long>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "ncarchar(30)", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: true),
                     BirthDate = table.Column<DateTime>(type: "datetime", nullable: true),
-                    Sex = table.Column<int>(type: "nvarchar(6)", nullable: false),
+                    Sex = table.Column<string>(type: "nvarchar(6)", nullable: true),
                     City = table.Column<string>(type: "nvarchar(15)", nullable: true),
                     Region = table.Column<string>(type: "nvarchar(15)", nullable: true),
                     Country = table.Column<string>(type: "nvarchar(15)", nullable: true),
@@ -96,7 +86,7 @@ namespace Ford.WebApi.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    RoleId = table.Column<long>(type: "INTEGER", nullable: false),
                     ClaimType = table.Column<string>(type: "TEXT", nullable: true),
                     ClaimValue = table.Column<string>(type: "TEXT", nullable: true)
                 },
@@ -117,7 +107,7 @@ namespace Ford.WebApi.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserId = table.Column<long>(type: "INTEGER", nullable: false),
                     ClaimType = table.Column<string>(type: "TEXT", nullable: true),
                     ClaimValue = table.Column<string>(type: "TEXT", nullable: true)
                 },
@@ -139,7 +129,7 @@ namespace Ford.WebApi.Migrations
                     LoginProvider = table.Column<string>(type: "TEXT", nullable: false),
                     ProviderKey = table.Column<string>(type: "TEXT", nullable: false),
                     ProviderDisplayName = table.Column<string>(type: "TEXT", nullable: true),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    UserId = table.Column<long>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -156,8 +146,8 @@ namespace Ford.WebApi.Migrations
                 name: "AspNetUserRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RoleId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    UserId = table.Column<long>(type: "INTEGER", nullable: false),
+                    RoleId = table.Column<long>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -180,7 +170,7 @@ namespace Ford.WebApi.Migrations
                 name: "AspNetUserTokens",
                 columns: table => new
                 {
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserId = table.Column<long>(type: "INTEGER", nullable: false),
                     LoginProvider = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Value = table.Column<string>(type: "TEXT", nullable: true)
@@ -197,25 +187,24 @@ namespace Ford.WebApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "HorseOwner",
+                name: "HorseOwners",
                 columns: table => new
                 {
                     HorseId = table.Column<long>(type: "INTEGER", nullable: false),
-                    UserId = table.Column<Guid>(type: "nvarchar(40)", nullable: false),
-                    RuleAccess = table.Column<string>(type: "nvarchar(8)", nullable: false),
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false)
+                    UserId = table.Column<long>(type: "nvarchar(40)", nullable: false),
+                    RuleAccess = table.Column<string>(type: "nvarchar(8)", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_HorseOwner", x => new { x.UserId, x.HorseId });
+                    table.PrimaryKey("PK_HorseOwners", x => new { x.UserId, x.HorseId });
                     table.ForeignKey(
-                        name: "FK_HorseOwner_AspNetUsers_UserId",
+                        name: "FK_HorseOwners_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_HorseOwner_Horses_HorseId",
+                        name: "FK_HorseOwners_Horses_HorseId",
                         column: x => x.HorseId,
                         principalTable: "Horses",
                         principalColumn: "HorseId",
@@ -229,12 +218,20 @@ namespace Ford.WebApi.Migrations
                     SaveId = table.Column<long>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     HorseId = table.Column<long>(type: "INTEGER", nullable: false),
-                    Header = table.Column<string>(type: "nvarchar(30)", nullable: true),
+                    UserId = table.Column<long>(type: "INTEGER", nullable: false),
+                    Header = table.Column<string>(type: "nvarchar(30)", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: true),
                     Date = table.Column<DateTime>(type: "datetime", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Saves", x => x.SaveId);
+                    table.ForeignKey(
+                        name: "FK_Saves_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Saves_Horses_HorseId",
                         column: x => x.HorseId,
@@ -249,22 +246,16 @@ namespace Ford.WebApi.Migrations
                 {
                     SaveId = table.Column<long>(type: "INTEGER", nullable: false),
                     BoneId = table.Column<string>(type: "nvarchar(18)", nullable: false),
-                    VectorRotationX = table.Column<float>(type: "REAL", nullable: true),
-                    VectorRotationY = table.Column<float>(type: "REAL", nullable: true),
-                    VectorRotationZ = table.Column<float>(type: "REAL", nullable: true),
-                    PositionVectorX = table.Column<float>(type: "REAL", nullable: true),
-                    PositionVectorY = table.Column<float>(type: "REAL", nullable: true),
-                    PositionVectorZ = table.Column<float>(type: "REAL", nullable: true)
+                    RotationX = table.Column<float>(type: "REAL", nullable: true),
+                    RotationY = table.Column<float>(type: "REAL", nullable: true),
+                    RotationZ = table.Column<float>(type: "REAL", nullable: true),
+                    PositionX = table.Column<float>(type: "REAL", nullable: true),
+                    PositionY = table.Column<float>(type: "REAL", nullable: true),
+                    PositionZ = table.Column<float>(type: "REAL", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_SaveBones", x => new { x.SaveId, x.BoneId });
-                    table.ForeignKey(
-                        name: "FK_SaveBones_Bones_BoneId",
-                        column: x => x.BoneId,
-                        principalTable: "Bones",
-                        principalColumn: "BoneId",
-                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_SaveBones_Saves_SaveId",
                         column: x => x.SaveId,
@@ -311,21 +302,22 @@ namespace Ford.WebApi.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_HorseOwner_HorseId",
-                table: "HorseOwner",
+                name: "IX_HorseOwners_HorseId",
+                table: "HorseOwners",
                 column: "HorseId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SaveBones_BoneId",
-                table: "SaveBones",
-                column: "BoneId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Saves_HorseId",
                 table: "Saves",
                 column: "HorseId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Saves_UserId",
+                table: "Saves",
+                column: "UserId");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
@@ -344,7 +336,7 @@ namespace Ford.WebApi.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "HorseOwner");
+                name: "HorseOwners");
 
             migrationBuilder.DropTable(
                 name: "SaveBones");
@@ -353,13 +345,10 @@ namespace Ford.WebApi.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
-
-            migrationBuilder.DropTable(
-                name: "Bones");
-
-            migrationBuilder.DropTable(
                 name: "Saves");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUsers");
 
             migrationBuilder.DropTable(
                 name: "Horses");

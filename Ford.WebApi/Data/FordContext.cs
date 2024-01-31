@@ -14,9 +14,9 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
     public FordContext(DbContextOptions<FordContext> options)
         : base(options)
     {
+        //Database.EnsureDeleted();
     }
 
-    public virtual DbSet<Bone> Bones { get; set; } = null!;
     public virtual DbSet<Horse> Horses { get; set; } = null!;
     public virtual DbSet<Save> Saves { get; set; } = null!;
     public virtual DbSet<SaveBone> SaveBones { get; set; } = null!;
@@ -67,12 +67,7 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
 
         modelBuilder.Entity<SaveBone>(entity =>
         {
-            entity.HasKey(e => new { e.SaveId, e.BoneId });
-
-            entity.HasOne(d => d.Bone)
-                .WithMany(p => p.SaveBones)
-                .HasForeignKey(d => d.BoneId)
-                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasKey(e => new { e.SaveId });
 
             entity.HasOne(d => d.Save)
                 .WithMany(p => p.SaveBones)

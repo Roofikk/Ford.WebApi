@@ -50,11 +50,6 @@ public class SavesController : ControllerBase
             if (collection.CurrentValue is null)
                 continue;
 
-            foreach (var saveBone in collection.CurrentValue)
-            {
-                db.Entry(saveBone).Reference(sb => sb.Bone).Load();
-            }
-
             ResponseSaveDto saveDto = MapSave(save);
             savesDto.Add(saveDto);
         }
@@ -141,15 +136,12 @@ public class SavesController : ControllerBase
         {
             saveBones.Add(new SaveBone
             {
-                Bone = new Bone
-                {
-                    BoneId = bone.BoneId,
-                    Name = bone.Name,
-                    GroupId = bone.GroupId
-                },
+                BoneId = bone.BoneId,
+
                 PositionX = bone.Position?.X,
                 PositionY = bone.Position?.Y,
                 PositionZ = bone.Position?.Z,
+
                 RotationX = bone.Rotation?.X,
                 RotationY = bone.Rotation?.Y,
                 RotationZ = bone.Rotation?.Z,
@@ -328,8 +320,7 @@ public class SavesController : ControllerBase
             responseSaveDto.Bones.Add(new BoneDto()
             {
                 BoneId = bone.BoneId,
-                GroupId = bone.Bone.GroupId,
-                Name = bone.Bone.Name,
+
                 Position = new Vector()
                 {
                     X = bone.PositionX!.Value,
