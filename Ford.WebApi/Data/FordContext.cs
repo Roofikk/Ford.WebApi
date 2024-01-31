@@ -14,7 +14,7 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
     public FordContext(DbContextOptions<FordContext> options)
         : base(options)
     {
-        Database.EnsureDeleted();
+        //Database.EnsureDeleted();
     }
 
     public virtual DbSet<Horse> Horses { get; set; } = null!;
