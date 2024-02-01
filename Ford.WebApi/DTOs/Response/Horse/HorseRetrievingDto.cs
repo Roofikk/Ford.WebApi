@@ -1,8 +1,4 @@
-﻿using Ford.WebApi.Data.Entities;
-using Ford.WebApi.DTOs.Outgoing;
-using System.Runtime.CompilerServices;
-
-namespace Ford.WebApi.Dtos.Horse;
+﻿namespace Ford.WebApi.Dtos.Horse;
 
 public class HorseRetrievingDto
 {

@@ -8,6 +8,10 @@ using Ford.WebApi.Dtos.User;
 using System.Security.Claims;
 using AutoMapper;
 using Ford.WebApi.Models.Identity;
+using Ford.WebApi.Dtos.Response;
+using System.Net;
+using Microsoft.AspNetCore.Http.Extensions;
+using System.Collections.ObjectModel;
 
 namespace Ford.WebApi.Controllers;
 
@@ -34,12 +38,18 @@ public class IdentityController : ControllerBase
     }
 
     [HttpPost]
-    [Route("register")]
+    [Route("sign-up")]
+    [ProducesResponseType(typeof(IEnumerable<UserGettingDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<UserGettingDto>> Register([FromBody] UserRegister request)
     {
+        // надо разобраться, как вообще работает ModelState и как он может быть невалидным
         if (!ModelState.IsValid)
         {
-            return BadRequest(request);
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Model state",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("Invalid data", "Model state is invalid. Check correctly input.") }));
         }
 
         User user = new User
@@ -55,18 +65,24 @@ public class IdentityController : ControllerBase
 
         IdentityResult result = await userManager.CreateAsync(user, request.Password);
 
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(error.Code, error.Description);
-        }
-        
         if (!result.Succeeded)
         {
-            return BadRequest(ModelState.Select(e => e.Value.Errors).ToArray());
+            Collection<Error> responseErrors = new();
+
+            foreach (var error in result.Errors)
+            {
+                responseErrors.Add(new(error.Code, error.Description));
+            }
+
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Sign up failed",
+                HttpStatusCode.BadRequest,
+                responseErrors));
         }
 
         var findUser = db.Users.FirstOrDefault(u => u.UserName == request.Login) 
-            ?? throw new Exception($"User {request.Email} not found");
+            ?? throw new Exception($"User {request.Login} not found");
 
         IdentityRole<long>? memberRoleIdentity = await roleManager.FindByNameAsync(Roles.Member);
 

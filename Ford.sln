@@ -5,6 +5,8 @@ VisualStudioVersion = 17.7.34202.233
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ford.WebApi", "Ford.WebApi\Ford.WebApi.csproj", "{8C96AA76-F431-49C4-A982-3DE27F86E498}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ford.WebApi.Tests", "Ford.WebApi.Tests\Ford.WebApi.Tests.csproj", "{B0BA3179-39AC-43AC-AA78-F1471D0ADA88}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{8C96AA76-F431-49C4-A982-3DE27F86E498}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8C96AA76-F431-49C4-A982-3DE27F86E498}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8C96AA76-F431-49C4-A982-3DE27F86E498}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0BA3179-39AC-43AC-AA78-F1471D0ADA88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0BA3179-39AC-43AC-AA78-F1471D0ADA88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0BA3179-39AC-43AC-AA78-F1471D0ADA88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0BA3179-39AC-43AC-AA78-F1471D0ADA88}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

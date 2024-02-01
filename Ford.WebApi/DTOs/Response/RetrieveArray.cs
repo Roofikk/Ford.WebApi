@@ -1,4 +1,4 @@
-﻿namespace Ford.WebApi.DTOs.Outgoing
+﻿namespace Ford.WebApi.Dtos.Response
 {
     public class RetrieveArray<T>
     {

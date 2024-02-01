@@ -150,42 +150,6 @@ public class SavesController : ControllerBase
 
         save.SaveBones = saveBones;
 
-        //IEnumerable<Bone> bones = db.Bones.AsEnumerable();
-
-        //foreach (var rb in requestSave.Bones)
-        //{
-        //    Bone? bone = bones.FirstOrDefault(b => b.BoneId == rb.BoneId);
-
-        //    bone ??= new Bone
-        //        {
-        //            BoneId = rb.BoneId,
-        //            GroupId = rb.GroupId,
-        //            Name = rb.Name,
-        //        };
-
-        //    if (rb.Position is null && rb.Rotation is null)
-        //    {
-        //        continue;
-        //    }
-
-        //    if (rb.Position!.Magnitude < 0.0001f && rb.Rotation!.Magnitude < 0.0001f)
-        //    {
-        //        continue;
-        //    }
-
-        //    db.SaveBones.Add(new SaveBone()
-        //    {
-        //        Bone = bone,
-        //        Save = save,
-        //        PositionX = rb.Position?.X,
-        //        PositionY = rb.Position?.Y,
-        //        PositionZ = rb.Position?.Z,
-        //        RotationX = rb.Rotation?.X,
-        //        RotationY = rb.Rotation?.Y,
-        //        RotationZ = rb.Rotation?.Z,
-        //    });
-        //}
-
         db.UpdateRange(save.SaveBones);
         await db.Saves.AddAsync(save);
         await db.SaveChangesAsync();

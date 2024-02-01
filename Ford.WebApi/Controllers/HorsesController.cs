@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Ford.WebApi.Dtos.Horse;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Ford.WebApi.Data.Entities;
@@ -10,7 +9,10 @@ using Microsoft.Extensions.Primitives;
 using Ford.WebApi.Models.Horse;
 using System.Collections.ObjectModel;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Ford.WebApi.DTOs.Outgoing;
+using Ford.WebApi.Dtos.Response;
+using Ford.WebApi.Dtos.Horse;
+using Microsoft.AspNetCore.Http.Extensions;
+using System.Net;
 
 namespace Ford.WebApi.Controllers;
 
@@ -35,14 +37,22 @@ public class HorsesController : ControllerBase
     {
         if (!Request.Headers.TryGetValue("Authorization", out StringValues token))
         {
-            return Unauthorized();
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Unauthorized",
+                HttpStatusCode.Unauthorized, 
+                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
         User? user = await tokenService.GetUserByToken(token);
 
         if (user is null)
         {
-            return Unauthorized();
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Unauthorized",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("Unauthorized", "User is not exists") }));
         }
 
         IEnumerable<Horse> horses = db.Horses.Where(h => h.HorseOwners.Any(o => o.UserId == user.Id))
@@ -50,7 +60,7 @@ public class HorsesController : ControllerBase
 
         if (!horses.Any())
         {
-            return Ok(new RetrieveArray<HorseRetrievingDto>());
+            return new RetrieveArray<HorseRetrievingDto>();
         }
         else
         {
