@@ -51,10 +51,21 @@ public class TokenService : ITokenService
         return jwtToken;
     }
 
-    public async Task<User?> GetUserByPrincipal(ClaimsPrincipal userPrincipal)
+    public async Task<User?> GetUserByPrincipal(ClaimsPrincipal claimsPrincipal)
     {
-        //ClaimsPrincipal? principal = GetPrincipalFromToken(jwtToken.Replace("Bearer ", string.Empty));
-        Claim? claimUserId = userPrincipal.Claims
+        string? id = GetUserId(claimsPrincipal);
+
+        if (id is null)
+        {
+            return null;
+        }
+
+        return await userManager.FindByIdAsync(id);
+    }
+
+    public string? GetUserId(ClaimsPrincipal claimsPrincipal)
+    {
+        Claim? claimUserId = claimsPrincipal.Claims
             .SingleOrDefault(c => c.Type == JwtRegisteredClaimNames.NameId || c.Type == ClaimTypes.NameIdentifier);
 
         if (claimUserId is null)
@@ -62,15 +73,6 @@ public class TokenService : ITokenService
             return null;
         }
 
-        User? user = await userManager.FindByIdAsync(claimUserId.Value);
-
-        if (user is null)
-        {
-            return null;
-        }
-        else
-        {
-            return user;
-        }
-    } 
+        return claimUserId.Value;
+    }
 }
