@@ -1,5 +1,4 @@
 ﻿using Ford.WebApi.Data.Entities;
-using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
 
 namespace Ford.WebApi.Services.Identity

@@ -11,8 +11,6 @@ using Ford.WebApi.Dtos.Response;
 using System.Net;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Collections.ObjectModel;
-using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace Ford.WebApi.Controllers;
 
