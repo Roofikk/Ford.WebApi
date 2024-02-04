@@ -20,46 +20,49 @@ public class TokenService : ITokenService
         this.userManager = userManager;
     }
 
-    public string GenerateToken(User user, List<IdentityRole<long>> roles, TimeSpan tokenLifeTime)
+    public async Task<string> GenerateToken(User user, TimeSpan tokenLifeTime)
     {
         var issuer = _jwtSettings.Issuer;
         var audience = _jwtSettings.Audience;
         var key = Encoding.ASCII.GetBytes(_jwtSettings.Key);
+        var roles = await userManager.GetRolesAsync(user);
 
-        return user.CreateClaims(roles).CreateToken(issuer, audience, key, tokenLifeTime);
-    }
-
-    public ClaimsPrincipal? GetPrincipalFromToken(string? token)
-    {
-        var tokenValidationParameters = new TokenValidationParameters
+        List<Claim> claims = new()
         {
-            ValidateAudience = false,
-            ValidateIssuer = false,
-            ValidateIssuerSigningKey = true,
-            ValidateLifetime = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key))
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.NameId, user.Id.ToString()),
+            new("roles", String.Join(',', roles))
+        };
+
+        var claimsIdentity = new ClaimsIdentity(claims);
+
+        var securityToken = new SecurityTokenDescriptor()
+        {
+            Subject = claimsIdentity,
+            Expires = DateTime.UtcNow.Add(tokenLifeTime),
+            Issuer = issuer,
+            Audience = audience,
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();
-        var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
-        if (securityToken is not JwtSecurityToken jwtSecurityToken || 
-            !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
-            throw new SecurityTokenException("Invalid token");
+        var jwtToken = tokenHandler.WriteToken(tokenHandler.CreateToken(securityToken));
 
-        return principal;
+        return jwtToken;
     }
 
-    public async Task<User?> GetUserByToken(string? jwtToken)
+    public async Task<User?> GetUserByPrincipal(ClaimsPrincipal userPrincipal)
     {
-        ClaimsPrincipal? principal = GetPrincipalFromToken(jwtToken.Replace("Bearer ", string.Empty));
+        //ClaimsPrincipal? principal = GetPrincipalFromToken(jwtToken.Replace("Bearer ", string.Empty));
+        Claim? claimUserId = userPrincipal.Claims
+            .SingleOrDefault(c => c.Type == JwtRegisteredClaimNames.NameId || c.Type == ClaimTypes.NameIdentifier);
 
-        if (principal == null)
+        if (claimUserId is null)
         {
             return null;
         }
 
-        string? userName = principal.Identity!.Name;
-        User? user = await userManager.FindByNameAsync(userName);
+        User? user = await userManager.FindByIdAsync(claimUserId.Value);
 
         if (user is null)
         {

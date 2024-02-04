@@ -44,7 +44,7 @@ public class HorsesController : ControllerBase
                 new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
-        User? user = await tokenService.GetUserByToken(token);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {
@@ -91,7 +91,7 @@ public class HorsesController : ControllerBase
             return Unauthorized();
         }
 
-        User? user = await tokenService.GetUserByToken(token);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {
@@ -123,12 +123,7 @@ public class HorsesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<HorseRetrievingDto>> Create([FromBody] HorseForCreationDto requestHorse)
     {
-        if (!Request.Headers.TryGetValue("Authorization", out var token))
-        {
-            return Unauthorized();
-        }
-
-        User? user = await tokenService.GetUserByToken(token);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {
@@ -214,12 +209,7 @@ public class HorsesController : ControllerBase
     [Route("horseOwners")]
     public async Task<ActionResult<HorseRetrievingDto>> UpdateHorseOwnersAsync([FromBody] RequestUpdateHorseOwners requestHorseOwners)
     {
-        if (!Request.Headers.TryGetValue("Authorization", out var token))
-        {
-            return Unauthorized();
-        }
-
-        User? user = await tokenService.GetUserByToken(token);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {
@@ -286,12 +276,7 @@ public class HorsesController : ControllerBase
     [HttpPut]
     public async Task<ActionResult<HorseRetrievingDto>> UpdateAsync([FromBody] HorseForUpdateDto horse)
     {
-        if (!Request.Headers.TryGetValue("Authorization", out var token))
-        {
-            return Unauthorized();
-        }
-
-        User? user = await tokenService.GetUserByToken(token);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {
@@ -334,8 +319,7 @@ public class HorsesController : ControllerBase
     [HttpDelete]
     public async Task<IActionResult> DeleteAsync(long id)
     {
-        string token = Request.Headers["Authorization"];
-        User? user = await tokenService.GetUserByToken(token);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {

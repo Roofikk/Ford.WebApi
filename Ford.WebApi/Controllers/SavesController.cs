@@ -29,8 +29,7 @@ public class SavesController : ControllerBase
     [HttpGet("{horseId}")]
     public async Task<ActionResult<IEnumerable<ResponseSaveDto>>> Get(long horseId)
     {
-        string token = Request.Headers["Authorization"];
-        User? user = await tokenService.GetUserByToken(token);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {
@@ -86,7 +85,7 @@ public class SavesController : ControllerBase
     public async Task<ActionResult<ResponseSaveDto>> Post([FromRoute] long horseId, [FromBody] RequestCreateSaveDto requestSave)
     {
         // get authorize user
-        User? user = await tokenService.GetUserByToken(Request.Headers.Authorization);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {
@@ -161,8 +160,7 @@ public class SavesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<ResponseSaveDto>> Put(int id, [FromBody] RequestUpdateSaveDto requestSave)
     {
-        // get authorize user
-        User? user = await tokenService.GetUserByToken(Request.Headers["Authorization"]);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {
@@ -219,7 +217,7 @@ public class SavesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        User? user = await tokenService.GetUserByToken(Request.Headers["Authorization"]);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {

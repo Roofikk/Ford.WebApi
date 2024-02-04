@@ -65,7 +65,8 @@ builder.Services.AddIdentity<User, IdentityRole<long>>(opts =>
     .AddUserManager<UserManager<User>>()
     .AddSignInManager<SignInManager<User>>()
     .AddRoles<IdentityRole<long>>()
-    .AddRoleManager<RoleManager<IdentityRole<long>>>();
+    .AddRoleManager<RoleManager<IdentityRole<long>>>()
+    .AddDefaultTokenProviders();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

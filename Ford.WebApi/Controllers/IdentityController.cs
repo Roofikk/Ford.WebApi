@@ -5,13 +5,14 @@ using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using Ford.WebApi.Services.Identity;
 using Ford.WebApi.Dtos.User;
-using System.Security.Claims;
 using AutoMapper;
 using Ford.WebApi.Models.Identity;
 using Ford.WebApi.Dtos.Response;
 using System.Net;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Collections.ObjectModel;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Ford.WebApi.Controllers;
 
@@ -25,7 +26,7 @@ public class IdentityController : ControllerBase
     private readonly ITokenService tokenService;
     private readonly IMapper mapper;
 
-    private static readonly TimeSpan tokenLifeTime = TimeSpan.FromDays(14);
+    private static readonly TimeSpan tokenLifeTime = TimeSpan.FromHours(8);
 
     public IdentityController(FordContext db, ITokenService tokenService, UserManager<User> userManager,
         RoleManager<IdentityRole<long>> roleManager, IMapper mapper)
@@ -39,13 +40,14 @@ public class IdentityController : ControllerBase
 
     [HttpPost]
     [Route("sign-up")]
-    [ProducesResponseType(typeof(IEnumerable<UserGettingDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<UserGettingDto>> Register([FromBody] UserRegister request)
+    [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<UserGettingDto>> SignUp([FromBody] UserRegister request)
     {
         // надо разобраться, как вообще работает ModelState и как он может быть невалидным
         if (!ModelState.IsValid)
         {
-            return Unauthorized(new BadResponse(
+            return BadRequest(new BadResponse(
                 Request.GetDisplayUrl(),
                 "Model state",
                 HttpStatusCode.Unauthorized,
@@ -99,160 +101,152 @@ public class IdentityController : ControllerBase
 
     [HttpPost]
     [Route("login")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] UserLogin request)
     {
-        User? managedUser = await userManager.FindByNameAsync(request.Login);
-
-        if (managedUser is null)
-        {
-            return NotFound("User not found");
-        }
-
-        bool isPasswordValid = await userManager.CheckPasswordAsync(managedUser, request.Password);
-
-        if (!isPasswordValid)
-        {
-            return Unauthorized();
-        }
-
-        User? user = db.Users.FirstOrDefault(u => u.UserName == request.Login);
+        User? user = await userManager.FindByNameAsync(request.Login);
 
         if (user is null)
         {
-            return Unauthorized();
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Authorization",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("Invalid Authorization", "Login or password incorrect") }));
         }
-        
-        List<long> roleIds = db.UserRoles.Where(r => r.UserId == user.Id)
-            .Select(x => x.RoleId).ToList();
 
-        var roles = db.Roles.Where(x => roleIds.Contains(x.Id)).ToList();
-        string? jwtToken = tokenService.GenerateToken(user, roles, tokenLifeTime);
-        // should encrypt this token and after return to user
+        bool isPasswordValid = await userManager.CheckPasswordAsync(user, request.Password);
+
+        if (!isPasswordValid)
+        {
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Authorization",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("Invalid Authorization", "Login or password incorrect") }));
+        }
+
+        string jwtToken = await tokenService.GenerateToken(user, tokenLifeTime);
 
         return new AuthResponse
         {
             Login = request.Login,
-            Email = user.Email,
             Token = jwtToken,
         };
     }
 
-    [Authorize]
-    [HttpGet]
+    [HttpGet, Authorize]
     [Route("check")]
     public IActionResult CheckAuth()
     {
         return Ok();
     }
 
-    [HttpGet]
+    [HttpGet, Authorize]
     [Route("/api/account")]
+    [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<UserGettingDto>> GetUserInfo()
     {
-        string? jwtToken = Request.Headers["Authorization"];
-        ClaimsPrincipal? principal = tokenService.GetPrincipalFromToken(jwtToken.Replace("Bearer ", string.Empty));
+        string jwtToken = Request.Headers.Authorization!;
 
-        if (principal == null)
-        {
-            return Unauthorized("Invalid access token");
-        }
-
-        string? userName = principal.Identity!.Name;
-
-        User? user = await userManager.FindByNameAsync(userName);
+        User? user = await tokenService.GetUserByPrincipal(User);
 
         if (user is null)
         {
-            return BadRequest("Invalid access token");
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Authorization",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("User's token", "Token is invalid") }));
         }
 
         UserGettingDto userDto = mapper.Map<UserGettingDto>(user);
         return userDto;
     }
 
-    [Authorize]
-    [HttpPost]
+    [HttpPost, Authorize]
     [Route("/api/account")]
+    [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<UserGettingDto>> Update([FromBody] UpdateUserRequest request)
     {
-        if (!Request.Headers.TryGetValue("Authorization", out var token))
+        if (!ModelState.IsValid)
         {
-            return Unauthorized("Invalid access token");
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Invalid data",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("Invalid data", "Body content is incorrect") }));
         }
-        else
+
+        User? user = await tokenService.GetUserByPrincipal(User);
+
+        if (user is null)
         {
-            User? user = await tokenService.GetUserByToken(token);
-
-            if (user is null)
-            {
-                return Unauthorized("Invalid access token");
-            }
-
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(request);
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
-            {
-                //Learn about update phone number
-                await userManager.SetPhoneNumberAsync(user, request.PhoneNumber);
-            }
-
-            user.FirstName = request.FirstName;
-            user.LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName;
-            user.City = string.IsNullOrEmpty(request.City) ? null : request.City;
-            user.Region = string.IsNullOrEmpty(request.Region) ? null : request.Region;
-            user.Country = string.IsNullOrEmpty(request.Country) ? null : request.Country;
-            user.BirthDate = request.BirthDate is null ? null : request.BirthDate;
-            user.LastUpdatedDate = DateTime.UtcNow;
-
-            await db.SaveChangesAsync();
-
-            return Ok(request);
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Authorization",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("User's token", "Token is invalid") }));
         }
+
+        user.FirstName = request.FirstName;
+        user.LastName = request.LastName;
+        user.City = request.City;
+        user.Region = request.Region;
+        user.Country = request.Country;
+        user.BirthDate = request.BirthDate is null ? null : request.BirthDate;
+        user.LastUpdatedDate = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+
+        UserGettingDto userDto = mapper.Map<UserGettingDto>(user);
+        return Ok(userDto);
     }
 
-    [Authorize]
-    [HttpPost]
+    [HttpPost, Authorize]
     [Route("/api/account/password")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<AuthResponse>> ChangePassword([FromBody] RequestChangePassword request)
     {
-        if (!Request.Headers.TryGetValue("Authorization", out var token))
+        User? user = await tokenService.GetUserByPrincipal(User);
+
+        if (user is null)
         {
-            return Unauthorized("Invalid access token");
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Authorization",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("User's token", "Token is invalid") }));
         }
-        else
+
+        IdentityResult result = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+
+        if (!result.Succeeded)
         {
-            if (request.CurrentPassword == request.NewPassword)
-            {
-                return BadRequest("Current password and new password is equal");
-            }
-
-            User? user = await tokenService.GetUserByToken(token);
-
-            if (user is null)
-            {
-                return Unauthorized("Invalid access token");
-            }
-
-            IdentityResult result = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            Collection<Error> responseErrors = new();
 
             foreach (var error in result.Errors)
             {
-                ModelState.AddModelError(error.Code, error.Description);
+                responseErrors.Add(new(error.Code, error.Description));
             }
 
-            if (!result.Succeeded)
-            {
-                return BadRequest();
-            }
-
-            return await Login(new UserLogin
-            {
-                Login = user.UserName,
-                Password = request.NewPassword
-            });
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Sign up failed",
+                HttpStatusCode.BadRequest,
+                responseErrors));
         }
+
+        return await Login(new UserLogin
+        {
+            Login = user.UserName!,
+            Password = request.NewPassword
+        });
     }
 }
