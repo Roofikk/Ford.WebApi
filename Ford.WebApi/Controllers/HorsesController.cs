@@ -5,7 +5,6 @@ using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using Microsoft.AspNetCore.Authorization;
 using Ford.WebApi.Services.Identity;
-using Microsoft.Extensions.Primitives;
 using Ford.WebApi.Models.Horse;
 using System.Collections.ObjectModel;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -16,7 +15,7 @@ using System.Net;
 
 namespace Ford.WebApi.Controllers;
 
-[Authorize()]
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class HorsesController : ControllerBase
@@ -33,29 +32,27 @@ public class HorsesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<RetrieveArray<HorseRetrievingDto>>> Get()
+    [ProducesResponseType(typeof(RetrieveArray<HorseRetrievingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<RetrieveArray<HorseRetrievingDto>>> GetAsync()
     {
-        if (!Request.Headers.TryGetValue("Authorization", out StringValues token))
-        {
-            return Unauthorized(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Unauthorized",
-                HttpStatusCode.Unauthorized, 
-                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
-        }
+        string? userId = tokenService.GetUserId(User);
 
-        User? user = await tokenService.GetUserByPrincipal(User);
-
-        if (user is null)
+        if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized(new BadResponse(
                 Request.GetDisplayUrl(),
                 "Unauthorized",
                 HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("Unauthorized", "User is not exists") }));
+                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
-        IEnumerable<Horse> horses = db.Horses.Where(h => h.HorseOwners.Any(o => o.UserId == user.Id))
+        if (!long.TryParse(userId, out long userIdLong))
+        {
+            throw new ArgumentException("Parse id exception");
+        }
+
+        IEnumerable<Horse> horses = db.Horses.Where(h => h.HorseOwners.Any(o => o.UserId == userIdLong))
             .AsEnumerable();
 
         if (!horses.Any())
@@ -79,30 +76,36 @@ public class HorsesController : ControllerBase
             }
 
             IEnumerable<HorseRetrievingDto> horsesDto = mapper.Map<IEnumerable<HorseRetrievingDto>>(horses);
-            return new RetrieveArray<HorseRetrievingDto>(horsesDto.ToArray());
+            return await Task.FromResult(new RetrieveArray<HorseRetrievingDto>(horsesDto.ToArray()));
         }
     }
 
     [HttpGet("{horseId}")]
-    public async Task<ActionResult<HorseRetrievingDto>> Get(long horseId)
+    [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<HorseRetrievingDto>> GetAsync(long horseId)
     {
-        if (!Request.Headers.TryGetValue("Authorization", out StringValues token))
+        string? userId = tokenService.GetUserId(User);
+
+        if (string.IsNullOrEmpty(userId))
         {
-            return Unauthorized();
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Unauthorized",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
-        User? user = await tokenService.GetUserByPrincipal(User);
-
-        if (user is null)
+        if (!long.TryParse(userId, out long userIdLong))
         {
-            return BadRequest();
+            throw new ArgumentException("Parse id exception");
         }
 
-        Horse? horse = db.Horses.SingleOrDefault(h => h.HorseOwners.Any(u => u.UserId == user.Id) && h.HorseId == horseId);
+        Horse? horse = db.Horses.SingleOrDefault(h => h.HorseOwners.Any(u => u.UserId == userIdLong) && h.HorseId == horseId);
 
         if (horse is null)
         {
-            return NotFound();
+            return NoContent();
         }
 
         CollectionEntry<Horse, HorseOwner> collection = db.Entry(horse).Collection(h => h.HorseOwners);
@@ -117,26 +120,38 @@ public class HorsesController : ControllerBase
         }
 
         HorseRetrievingDto horseDto = mapper.Map<HorseRetrievingDto>(horse);
-        return horseDto;
+        return await Task.FromResult(horseDto);
     }
 
     [HttpPost]
-    public async Task<ActionResult<HorseRetrievingDto>> Create([FromBody] HorseForCreationDto requestHorse)
+    [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<HorseRetrievingDto>> CreateAsync([FromBody] HorseForCreationDto requestHorse)
     {
-        User? user = await tokenService.GetUserByPrincipal(User);
+        string? userId = tokenService.GetUserId(User);
 
-        if (user is null)
+        if (string.IsNullOrEmpty(userId))
         {
-            return BadRequest();
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Unauthorized",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
-        Horse horseDto = mapper.Map<Horse>(requestHorse);
+        if (!long.TryParse(userId, out long userIdLong))
+        {
+            throw new ArgumentException("Parse id exception");
+        }
+
+        Horse horse = mapper.Map<Horse>(requestHorse);
         
         //Add current user
-        horseDto.HorseOwners.Add(new HorseOwner
+        horse.HorseOwners.Add(new HorseOwner
         {
-            Horse = horseDto,
-            User = user,
+            Horse = horse,
+            UserId = userIdLong,
             RuleAccess = OwnerRole.Creator.ToString()
         });
 
@@ -147,7 +162,11 @@ public class HorsesController : ControllerBase
 
             if (check.Any())
             {
-                return BadRequest("Some roles access can not be greater or equal than your");
+                return BadRequest(new BadResponse(
+                    Request.GetDisplayUrl(),
+                    "Role Access",
+                    HttpStatusCode.BadRequest,
+                    new Collection<Error> { new("Invalid Role", "Some roles access can not be greater or equal than your") }));
             }
 
             //Find exist user in DB
@@ -160,10 +179,17 @@ public class HorsesController : ControllerBase
                 foreach (var horseOwner in requestHorse.HorseOwners)
                 {
                     //Skip current user which was added early
-                    if (horseOwner.UserId == user.Id)
+                    if (horseOwner.UserId == userIdLong)
                         continue;
-
-                    OwnerRole role = Enum.Parse<OwnerRole>(horseOwner.RuleAccess, true);
+                    
+                    if (!Enum.TryParse(horseOwner.RuleAccess, true, out OwnerRole role))
+                    {
+                        return BadRequest(new BadResponse(
+                            Request.GetDisplayUrl(),
+                            "Role Access",
+                            HttpStatusCode.BadRequest,
+                            new Collection<Error> { new("Invalid Role", $"Role {horseOwner.RuleAccess} invalid") }));
+                    }
 
                     switch (role)
                     {
@@ -177,13 +203,16 @@ public class HorsesController : ControllerBase
                             horseOwner.RuleAccess = OwnerRole.All.ToString();
                             break;
                         default:
-                            string login = containsUsers.First(u => u.Id == horseOwner.UserId).UserName;
-                            return BadRequest($"Role {role} does not apply to {login}");
+                            return BadRequest(new BadResponse(
+                                Request.GetDisplayUrl(),
+                                "Role Access",
+                                HttpStatusCode.BadRequest,
+                                new Collection<Error> { new("Invalid Role", $"Role {role} not exists or does not apply to user") }));
                     }
 
-                    horseDto.HorseOwners.Add(new HorseOwner
+                    horse.HorseOwners.Add(new HorseOwner
                     {
-                        Horse = horseDto,
+                        Horse = horse,
                         UserId = horseOwner.UserId,
                         RuleAccess = horseOwner.RuleAccess.ToString(),
                     });
@@ -191,34 +220,47 @@ public class HorsesController : ControllerBase
             }
             else
             {
-                return NotFound("Some users not found");
+                return BadRequest(new BadResponse(
+                    Request.GetDisplayUrl(),
+                    "Bad request",
+                    HttpStatusCode.BadRequest,
+                    new Collection<Error> { new("Users not found", "Some users not found") }));
             }
         }
 
-        db.Horses.Add(horseDto);
+        db.Horses.Add(horse);
         await db.SaveChangesAsync();
 
-        var horseRetrieving = mapper.Map<HorseRetrievingDto>(horseDto);
-        return Created($"api/[controller]?horseId={horseDto.HorseId}", horseRetrieving);
+        var horseRetrieving = mapper.Map<HorseRetrievingDto>(horse);
+        return Created($"api/[controller]?horseId={horse.HorseId}", horseRetrieving);
     }
 
-    // Не доделал. Надо же еще удалить прошлые, которые не были включены в список!
-    // Надо было просто у лошади взять список владельцев и изменить его на текущий с текущими параметрами...
-    // Мдааа... Херни наворотил.
     [HttpPost]
     [Route("horseOwners")]
+    [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<HorseRetrievingDto>> UpdateHorseOwnersAsync([FromBody] RequestUpdateHorseOwners requestHorseOwners)
     {
-        User? user = await tokenService.GetUserByPrincipal(User);
+        string? userId = tokenService.GetUserId(User);
 
-        if (user is null)
+        if (string.IsNullOrEmpty(userId))
         {
-            return BadRequest();
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Unauthorized",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
+        }
+
+        if (!long.TryParse(userId, out long userIdLong))
+        {
+            throw new ArgumentException("Parse id exception");
         }
 
         //Search existing horse owner
         HorseOwner? currentOwner = await db.HorseOwners.FirstOrDefaultAsync(
-            hw => hw.UserId == user.Id && hw.HorseId == requestHorseOwners.HorseId);
+            hw => hw.UserId == userIdLong && hw.HorseId == requestHorseOwners.HorseId);
 
         if (currentOwner is null)
         {
@@ -233,15 +275,6 @@ public class HorsesController : ControllerBase
             return BadRequest("Access denied");
         }
 
-        //Find invalid access role to an object
-        var invalidRoles = requestHorseOwners.HorseOwners.Where(
-            hw => Enum.Parse<OwnerRole>(hw.RuleAccess) > currentOwnerRole - 1);
-
-        if (invalidRoles.Any())
-        {
-            return BadRequest("Some rules upper than you may provide");
-        }
-
         Horse? horse = await db.Horses.Include(h => h.HorseOwners)
             .FirstOrDefaultAsync(h => h.HorseId == requestHorseOwners.HorseId);
 
@@ -254,8 +287,26 @@ public class HorsesController : ControllerBase
 
         foreach (var reqOwner in requestHorseOwners.HorseOwners)
         {
-            if (reqOwner.UserId == user.Id)
+            if (reqOwner.UserId == userIdLong)
                 continue;
+
+            if (!Enum.TryParse(reqOwner.RuleAccess, true, out OwnerRole role))
+            {
+                return BadRequest(new BadResponse(
+                    Request.GetDisplayUrl(),
+                    "Role Access",
+                    HttpStatusCode.BadRequest,
+                    new Collection<Error> { new("Invalid Role", $"Role {reqOwner.RuleAccess} invalid") }));
+            }
+
+            if (role >= Enum.Parse<OwnerRole>(currentOwner.RuleAccess, true))
+            {
+                return BadRequest(new BadResponse(
+                    Request.GetDisplayUrl(),
+                    "Role Access",
+                    HttpStatusCode.BadRequest,
+                    new Collection<Error> { new("Invalid Role", $"You can't add a role that is higher than yours") }));
+            }
 
             newOwners.Add(new HorseOwner
             {
@@ -270,36 +321,61 @@ public class HorsesController : ControllerBase
         horse.HorseOwners = newOwners;
         await db.SaveChangesAsync();
 
-        return await Get(horse.HorseId);
+        return mapper.Map<HorseRetrievingDto>(horse);
     }
 
     [HttpPut]
+    [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<HorseRetrievingDto>> UpdateAsync([FromBody] HorseForUpdateDto horse)
     {
-        User? user = await tokenService.GetUserByPrincipal(User);
+        string? userId = tokenService.GetUserId(User);
 
-        if (user is null)
+        if (string.IsNullOrEmpty(userId))
         {
-            return BadRequest();
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Unauthorized",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
-        bool? check = await CheckAccessToHorseAsync(user.Id, horse.HorseId, OwnerRole.Write);
-
-        if (!check.HasValue)
+        if (!long.TryParse(userId, out long userIdLong))
         {
-            return BadRequest();
-        }
-        else if (!check.Value)
-        {
-            return BadRequest("Access denied");
+            throw new ArgumentException("Parse id exception");
         }
 
         Horse? entity = await db.Horses.Include(h => h.HorseOwners)
             .FirstOrDefaultAsync(h => h.HorseId == horse.HorseId);
 
-        if (entity is null)
+        if (entity == null)
         {
-            return BadRequest("Horse not found");
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Bad Request",
+                HttpStatusCode.BadRequest,
+                new Collection<Error> { new("Object non-existent", $"Horse (id: {horse.HorseId}) not found") }));
+        }
+
+        HorseOwner? owner = entity.HorseOwners.SingleOrDefault(o => o.UserId == userIdLong && o.HorseId == horse.HorseId);
+
+        if (owner is null)
+        {
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Bad Request",
+                HttpStatusCode.BadRequest,
+                new Collection<Error> { new("Access denied", $"You do not have permissions for the current action") }));
+        }
+
+        if (Enum.Parse<OwnerRole>(owner.RuleAccess, true) < OwnerRole.Write)
+        {
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Bad Request",
+                HttpStatusCode.BadRequest,
+                new Collection<Error> { new("Access denied", $"You do not have permissions for the current action") }));
         }
 
         entity.Name = horse.Name;
@@ -309,28 +385,37 @@ public class HorsesController : ControllerBase
         entity.Region = horse.Region;
         entity.Country = horse.Country;
 
-        return await UpdateHorseOwnersAsync(new RequestUpdateHorseOwners
-        {
-            HorseId = entity.HorseId,
-            HorseOwners = horse.Owners
-        });
+        return mapper.Map<HorseRetrievingDto>(horse);
     }
 
     [HttpDelete]
     public async Task<IActionResult> DeleteAsync(long id)
     {
-        User? user = await tokenService.GetUserByPrincipal(User);
+        string? userId = tokenService.GetUserId(User);
 
-        if (user is null)
+        if (string.IsNullOrEmpty(userId))
         {
-            return Unauthorized();
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Unauthorized",
+                HttpStatusCode.Unauthorized,
+                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
-        HorseOwner? owner = db.HorseOwners.SingleOrDefault(o => o.UserId == user.Id && o.HorseId == id);
+        if (!long.TryParse(userId, out long userIdLong))
+        {
+            throw new ArgumentException("Parse id exception");
+        }
+
+        HorseOwner? owner = db.HorseOwners.SingleOrDefault(o => o.UserId == userIdLong && o.HorseId == id);
 
         if (owner is null)
         {
-            return BadRequest("The horse wasn't found or you don't have access to it");
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Bad Request",
+                HttpStatusCode.BadRequest,
+                new Collection<Error> { new("Access denied", $"You do not have permissions for the current action") }));
         }
 
         if (Enum.Parse<OwnerRole>(owner.RuleAccess, true) == OwnerRole.Creator)
@@ -338,16 +423,15 @@ public class HorsesController : ControllerBase
             var referenceHorse = db.Entry(owner).Reference(o => o.Horse);
             await referenceHorse.LoadAsync();
 
-            if (!referenceHorse.IsLoaded)
-            {
-                return BadRequest();
-            }
-
             Horse? horse = referenceHorse.CurrentValue;
 
             if (horse is null)
             {
-                return BadRequest();
+                return BadRequest(new BadResponse(
+                    Request.GetDisplayUrl(),
+                    "Bad Request",
+                    HttpStatusCode.BadRequest,
+                    new Collection<Error> { new("Horse is null", $"Horse not found") }));
             }
 
             db.Remove(horse);
@@ -360,31 +444,5 @@ public class HorsesController : ControllerBase
             await db.SaveChangesAsync();
             return Ok();
         }
-    }
-
-    private async Task<HorseOwner?> GetHorseOwnerAsync(long userId, long horseId)
-    {
-        HorseOwner? owner = await db.HorseOwners.FirstOrDefaultAsync(
-            o => o.UserId == userId && o.HorseId == horseId);
-
-        return owner;
-    }
-
-    private bool? CheckAccessToHorse(HorseOwner? owner, OwnerRole needRole)
-    {
-        if (owner is null)
-        {
-            return null;
-        }
-
-        OwnerRole currentRole = Enum.Parse<OwnerRole>(owner.RuleAccess, true);
-
-        return currentRole >= needRole;
-    }
-
-    private async Task<bool?> CheckAccessToHorseAsync(long userId, long horseId, OwnerRole needRole)
-    {
-        HorseOwner? owner = await GetHorseOwnerAsync(userId, horseId);
-        return CheckAccessToHorse(owner, needRole);
     }
 }

@@ -23,9 +23,9 @@ namespace Ford.WebApi.Data.Entities
 
     public enum OwnerRole
     {
-        // Only read saves and other info about horse
+        // Only read saves and horse info
         Read = 0,
-        // Read/Write info about horse and add/edit other saves
+        // Read/Write horse info and add/edit saves
         Write = 1,
         // Also add/remove other users to horse
         All = 2,
