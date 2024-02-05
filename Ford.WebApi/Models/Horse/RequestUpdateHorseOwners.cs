@@ -1,6 +1,4 @@
-﻿using Ford.WebApi.Data.Entities;
-
-namespace Ford.WebApi.Models.Horse;
+﻿namespace Ford.WebApi.Models.Horse;
 
 public class RequestUpdateHorseOwners
 {

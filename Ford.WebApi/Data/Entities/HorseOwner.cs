@@ -10,6 +10,7 @@ namespace Ford.WebApi.Data.Entities
         [Key]
         [Column(TypeName = "nvarchar(40)")]
         public long UserId { get; set; }
+        // переименовать в AccessRole
         [Column(TypeName = "nvarchar(8)")]
         public string RuleAccess { get; set; } = null!;
 
@@ -21,7 +22,7 @@ namespace Ford.WebApi.Data.Entities
         public virtual Horse Horse { get; set; } = null!;
     }
 
-    public enum OwnerRole
+    public enum OwnerAccessRole
     {
         // Only read saves and horse info
         Read = 0,

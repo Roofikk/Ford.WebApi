@@ -46,7 +46,7 @@ public class HorseProfiles : Profile
                 dest => dest.Id,
                 opt => opt.MapFrom(src => src.UserId))
             .ForMember(
-                dest => dest.RuleAccess,
+                dest => dest.OwnerAccessRole,
                 opt => opt.MapFrom(src => src.RuleAccess))
             .ForMember(
                 dest => dest.FirstName,

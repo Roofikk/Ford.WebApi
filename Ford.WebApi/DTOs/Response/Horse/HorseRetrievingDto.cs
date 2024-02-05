@@ -16,8 +16,8 @@ public class HorseRetrievingDto
 
 public class OwnerDto
 {
-    public string Id { get; set; } = null!;
+    public long Id { get; set; }
     public string FirstName { get; set; } = null!;
     public string? LastName { get; set; }
-    public string RuleAccess { get; set; } = null!;
+    public string OwnerAccessRole { get; set; } = null!;
 }

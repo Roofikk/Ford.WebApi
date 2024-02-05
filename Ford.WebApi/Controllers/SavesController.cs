@@ -104,9 +104,9 @@ public class SavesController : ControllerBase
             return NotFound();
         }
 
-        OwnerRole currentOwnerRole = Enum.Parse<OwnerRole>(owner.RuleAccess);
+        OwnerAccessRole currentOwnerRole = Enum.Parse<OwnerAccessRole>(owner.RuleAccess);
 
-        if (currentOwnerRole < OwnerRole.Write)
+        if (currentOwnerRole < OwnerAccessRole.Write)
         {
             return BadRequest("No access to this action with the specified parameters");
         }
@@ -199,7 +199,7 @@ public class SavesController : ControllerBase
             return BadRequest("You don't have access to the horse");
         }
 
-        if (Enum.Parse<OwnerRole>(owner.RuleAccess) < OwnerRole.Write)
+        if (Enum.Parse<OwnerAccessRole>(owner.RuleAccess) < OwnerAccessRole.Write)
         {
             return BadRequest("You don't have access to the horse");
         }
@@ -255,7 +255,7 @@ public class SavesController : ControllerBase
             return BadRequest("Owner not found");
         }
 
-        if (Enum.Parse<OwnerRole>(owner.RuleAccess, true) < OwnerRole.Write)
+        if (Enum.Parse<OwnerAccessRole>(owner.RuleAccess, true) < OwnerAccessRole.Write)
         {
             return BadRequest("You don't have access to the action");
         }
