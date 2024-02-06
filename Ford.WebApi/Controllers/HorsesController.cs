@@ -12,9 +12,7 @@ using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Dtos.Horse;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Net;
-using Ford.WebApi.Dtos.User;
 using Ford.WebApi.Dtos.Request;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Ford.WebApi.Controllers;
 
@@ -382,7 +380,9 @@ public class HorsesController : ControllerBase
                 new Collection<Error> { new("Permission denied", "Permission denied for the object") }));
         }
 
-        User? newOwner = await db.Users.SingleOrDefaultAsync(u => u.Id == requestOwner.UserId);
+        User? newOwner = await db.Users
+            .Include(u => u.HorseOwners)
+            .SingleOrDefaultAsync(u => u.Id == requestOwner.UserId);
 
         if (newOwner is null)
         {
@@ -391,6 +391,17 @@ public class HorsesController : ControllerBase
                 "Not Found",
                 HttpStatusCode.BadRequest,
                 new Collection<Error> { new("Not Found", $"User (id: {requestOwner.UserId}) not found") }));
+        }
+
+        HorseOwner? existOwner = newOwner.HorseOwners.SingleOrDefault(o => o.HorseId == requestOwner.HorseId);
+
+        if (existOwner is not null)
+        {
+            return BadRequest(new BadResponse(
+               Request.GetDisplayUrl(),
+               "Owner exists",
+               HttpStatusCode.BadRequest,
+               new Collection<Error> { new("Owner exists", $"Adding owner is already exists") }));
         }
 
         if (role >= Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true))
@@ -447,6 +458,15 @@ public class HorsesController : ControllerBase
                "Argument Exception",
                HttpStatusCode.BadRequest,
                new Collection<Error> { new("Rule Access", $"Impossible argument {requestOwner.OwnerAccessRole}") }));
+        }
+
+        if (userIdLong == requestOwner.UserId)
+        {
+            return BadRequest(new BadResponse(
+               Request.GetDisplayUrl(),
+               "Argumet incorrect",
+               HttpStatusCode.BadRequest,
+               new Collection<Error> { new("Change yourself", $"You can't change yourself") }));
         }
 
         HorseOwner? currentOwner = await db.HorseOwners.SingleOrDefaultAsync(
@@ -517,15 +537,13 @@ public class HorsesController : ControllerBase
             throw new ArgumentException("Parse id exception");
         }
 
-        requestOwner.OwnerAccessRole ??= OwnerAccessRole.Read.ToString();
-
-        if (!Enum.TryParse(requestOwner.OwnerAccessRole, true, out OwnerAccessRole role))
+        if (userIdLong == requestOwner.UserId)
         {
             return BadRequest(new BadResponse(
                Request.GetDisplayUrl(),
-               "Argument Exception",
+               "Argumet incorrect",
                HttpStatusCode.BadRequest,
-               new Collection<Error> { new("Rule Access", $"Impossible argument {requestOwner.OwnerAccessRole}") }));
+               new Collection<Error> { new("Delete yourself", $"You can't delete yourself") }));
         }
 
         HorseOwner? currentOwner = await db.HorseOwners.SingleOrDefaultAsync(
