@@ -420,6 +420,8 @@ public class HorsesController : ControllerBase
             RuleAccess = requestOwner.OwnerAccessRole.ToString(),
         });
 
+        await db.SaveChangesAsync();
+
         return Created(Request.GetDisplayUrl(), new OwnerDto()
         {
             Id = requestOwner.UserId,
@@ -698,14 +700,13 @@ public class HorsesController : ControllerBase
             }
 
             db.Remove(horse);
-            await db.SaveChangesAsync();
-            return Ok();
         }
         else
         {
             db.Remove(owner);
-            await db.SaveChangesAsync();
-            return Ok();
         }
+
+        await db.SaveChangesAsync();
+        return Ok();
     }
 }
