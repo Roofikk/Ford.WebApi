@@ -142,7 +142,7 @@ public class IdentityController : ControllerBase
     }
 
     [HttpGet, Authorize]
-    [Route("/api/account")]
+    [Route("account")]
     [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<UserGettingDto>> GetUserInfo()
@@ -165,7 +165,7 @@ public class IdentityController : ControllerBase
     }
 
     [HttpPost, Authorize]
-    [Route("/api/account")]
+    [Route("account")]
     [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
@@ -206,7 +206,7 @@ public class IdentityController : ControllerBase
     }
 
     [HttpPost, Authorize]
-    [Route("/api/account/password")]
+    [Route("/account/password")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
