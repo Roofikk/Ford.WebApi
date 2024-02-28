@@ -206,7 +206,7 @@ public class IdentityController : ControllerBase
     }
 
     [HttpPost, Authorize]
-    [Route("/account/password")]
+    [Route("account/password")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]

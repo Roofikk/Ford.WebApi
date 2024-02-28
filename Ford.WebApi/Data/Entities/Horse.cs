@@ -15,7 +15,7 @@ namespace Ford.WebApi.Data.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long HorseId { get; set; }
         [Column(TypeName = "ncarchar(30)")]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
         [Column(TypeName = "TEXT")]
         public string? Description { get; set; }
         [Column(TypeName = "datetime")]
@@ -32,10 +32,10 @@ namespace Ford.WebApi.Data.Entities
         public DateTime CreationDate { get; set; }
 
         [InverseProperty("Horse")]
-        public virtual ICollection<Save> Saves { get; set; }
+        public virtual ICollection<Save> Saves { get; }
 
         [InverseProperty("Horse")]
-        public virtual ICollection<HorseOwner> HorseOwners { get; set; }
+        public virtual ICollection<HorseOwner> HorseOwners { get; }
     }
 
     public enum Sex

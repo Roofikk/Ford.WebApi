@@ -5,13 +5,14 @@ namespace Ford.WebApi.Data.Entities
 {
     public partial class User : IdentityUser<long>
     {
-        public User()
+        public User() : base()
         {
-            HorseOwners = new HashSet<HorseOwner>();
+            HorseOwners = [];
+            Saves = [];
         }
 
         [Column(TypeName = "nvarchar(20)")]
-        public string FirstName { get; set; }
+        public string FirstName { get; set; } = null!;
         [Column(TypeName = "nvarchar(20)")]
         public string? LastName { get; set; }
         [Column(TypeName = "nvarchar(25)")]
@@ -28,7 +29,7 @@ namespace Ford.WebApi.Data.Entities
         public DateTime LastUpdatedDate { get; set; }
 
         [InverseProperty("User")]
-        public virtual ICollection<HorseOwner> HorseOwners { get; set; }
-        public virtual ICollection<Save> Saves { get; set; }
+        public virtual ICollection<HorseOwner> HorseOwners { get; }
+        public virtual ICollection<Save> Saves { get; }
     }
 }
