@@ -4,7 +4,6 @@ namespace Ford.WebApi.Dtos.Horse;
 
 public class HorseForCreationDto
 {
-    public string? HorseId { get; set; }
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public DateTime? BirthDate { get; set; }
