@@ -13,5 +13,5 @@ public class BadResponse(string uri, string header, HttpStatusCode status, IColl
 public class Error(string title, string description)
 {
     public string Title { get; set; } = title;
-    public string Description { get; set; } = description;
+    public string Message { get; set; } = description;
 }

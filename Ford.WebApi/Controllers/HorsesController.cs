@@ -520,7 +520,7 @@ public class HorsesController : ControllerBase
     }
 
     [HttpDelete]
-    [Route("owner")]
+    [Route("owners")]
     public async Task<ActionResult> DeleteOwnerAsync(CreationHorseOwner requestOwner)
     {
         string? userId = tokenService.GetUserId(User);
