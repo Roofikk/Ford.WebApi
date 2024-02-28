@@ -6,7 +6,7 @@ public class HorseRetrievingDto
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public DateTime? BirthDate { get; set; }
-    public string Sex { get; set; } = Data.Entities.Sex.None.ToString();
+    public string? Sex { get; set; }
     public string? City { get; set; }
     public string? Region { get; set; }
     public string? Country { get; set; }

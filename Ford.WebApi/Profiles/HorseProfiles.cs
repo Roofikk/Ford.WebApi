@@ -24,7 +24,7 @@ public class HorseProfiles : Profile
                 opt => opt.MapFrom(src => src.BirthDate))
             .ForMember(
                 dest => dest.Sex,
-                opt => opt.MapFrom(src => src.Sex.ToString()))
+                opt => opt.MapFrom(src => src.Sex))
             .ForMember(
                 dest => dest.City,
                 opt => opt.MapFrom(src => src.City))

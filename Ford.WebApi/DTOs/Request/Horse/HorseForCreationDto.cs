@@ -1,5 +1,4 @@
-﻿using Ford.WebApi.Data.Entities;
-using Ford.WebApi.Models.Horse;
+﻿using Ford.WebApi.Models.Horse;
 
 namespace Ford.WebApi.Dtos.Horse;
 

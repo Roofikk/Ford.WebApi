@@ -1,8 +1,9 @@
 ﻿using AutoMapper;
+using Ford.WebApi.Data;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.User;
-using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using System.Data.Entity;
 
 namespace Ford.WebApi.Controllers;
 
@@ -10,12 +11,12 @@ namespace Ford.WebApi.Controllers;
 [ApiController]
 public class UsersController : ControllerBase
 {
-    private readonly IRepository<User, long> db;
     private readonly IMapper mapper;
+    private readonly FordContext db;
 
-    public UsersController(IRepository<User, long> db, IMapper mapper)
+    public UsersController(FordContext context, IMapper mapper)
     {
-        this.db = db;
+        db = context;
         this.mapper = mapper;
     }
 
@@ -27,7 +28,7 @@ public class UsersController : ControllerBase
     {
         if (id.HasValue)
         {
-            User? user = await db.RetrieveAsync(id.Value);
+            User? user = await db.Users.SingleOrDefaultAsync(u => u.Id == id);
 
             if (user is null)
             {
@@ -41,55 +42,56 @@ public class UsersController : ControllerBase
         }
         else
         {
-            IEnumerable<User>? users = await db.RetrieveAllAsync();
+            IEnumerable<User>? users = await db.Users.ToListAsync();
             return Ok(mapper.Map<IEnumerable<UserGettingDto>>(users));
         }
     }
 
-    [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<UserGettingDto>> Create([FromBody] UserCreationDto user)
-    {
-        User sourceUser = mapper.Map<User>(user);
+    //[HttpPost]
+    //[ProducesResponseType(StatusCodes.Status201Created)]
+    //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+    //public async Task<ActionResult<UserGettingDto>> Create([FromBody] UserCreationDto user)
+    //{
+    //    User sourceUser = mapper.Map<User>(user);
+    //    var existUser = db.Users.SingleOrDefaultAsync(u => u.Id == user.)
 
-        if (await db.IsExistAsync(sourceUser))
-        {
-            return BadRequest("User already exists");
-        }
+    //    if (await db.IsExistAsync(sourceUser))
+    //    {
+    //        return BadRequest("User already exists");
+    //    }
         
-        User? created = await db.CreateAsync(sourceUser);
+    //    User? created = await db.CreateAsync(sourceUser);
         
-        if (created is null)
-        {
-            return BadRequest();
-        }
+    //    if (created is null)
+    //    {
+    //        return BadRequest();
+    //    }
 
-        await db.SaveAsync();
+    //    await db.SaveAsync();
 
-        UserGettingDto responseUser = mapper.Map<UserGettingDto>(created);
-        return CreatedAtAction(nameof(Get), new { id = created.Id }, responseUser);
-    }
+    //    UserGettingDto responseUser = mapper.Map<UserGettingDto>(created);
+    //    return CreatedAtAction(nameof(Get), new { id = created.Id }, responseUser);
+    //}
 
-    [HttpPut]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UserGettingDto>> Update([FromBody]UserForUpdateDto user)
-    {
-        User sourceUser = mapper.Map<User>(user);
+    //[HttpPut]
+    //[ProducesResponseType(StatusCodes.Status200OK)]
+    //[ProducesResponseType(StatusCodes.Status400BadRequest)]
+    //[ProducesResponseType(StatusCodes.Status404NotFound)]
+    //public async Task<ActionResult<UserGettingDto>> Update([FromBody]UserForUpdateDto user)
+    //{
+    //    User sourceUser = mapper.Map<User>(user);
 
-        User? updated = await db.UpdateAsync(sourceUser);
+    //    User? updated = await db.UpdateAsync(sourceUser);
 
-        if (updated is null)
-        {
-            return NotFound(user);
-        }
+    //    if (updated is null)
+    //    {
+    //        return NotFound(user);
+    //    }
 
-        await db.SaveAsync();
-        UserGettingDto response = mapper.Map<UserGettingDto>(updated);
-        return Ok(response);
-    }
+    //    await db.SaveAsync();
+    //    UserGettingDto response = mapper.Map<UserGettingDto>(updated);
+    //    return Ok(response);
+    //}
 
     [HttpDelete]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -97,19 +99,13 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(long id)
     {
-        if (await db.IsExistAsync(id))
-        {
-            bool success = await db.DeleteAsync(id);
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == id);
 
-            if (success)
-            {
-                await db.SaveAsync();
-                return Ok();
-            }
-            else
-            {
-                return BadRequest();
-            }
+        if (user != null)
+        {
+            db.Remove(user);
+            await db.SaveChangesAsync();
+            return Ok();
         }
         else
         {

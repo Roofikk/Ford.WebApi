@@ -1,4 +1,3 @@
-using Ford.WebApi.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -98,7 +97,6 @@ builder.Services.AddSwaggerGen(opts =>
     });
 });
 
-builder.Services.AddScoped<IRepository<User, long>, UserRepository>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 

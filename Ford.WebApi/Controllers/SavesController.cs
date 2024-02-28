@@ -146,7 +146,7 @@ public class SavesController : ControllerBase
             });
         }
 
-        save.SaveBones = saveBones;
+        await db.SaveBones.AddRangeAsync(saveBones);
 
         db.UpdateRange(save.SaveBones);
         await db.Saves.AddAsync(save);
