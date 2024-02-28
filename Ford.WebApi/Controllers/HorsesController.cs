@@ -553,11 +553,11 @@ public class HorsesController : ControllerBase
 
     [HttpDelete]
     [Route("owners")]
-    public async Task<ActionResult> DeleteOwnerAsync(CreationHorseOwner requestOwner)
+    public async Task<ActionResult> DeleteOwnerAsync(long horseId, long userId)
     {
-        string? userId = tokenService.GetUserId(User);
+        string? existUserId = tokenService.GetUserId(User);
 
-        if (string.IsNullOrEmpty(userId))
+        if (string.IsNullOrEmpty(existUserId))
         {
             return Unauthorized(new BadResponse(
                 Request.GetDisplayUrl(),
@@ -566,12 +566,12 @@ public class HorsesController : ControllerBase
                 new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
-        if (!long.TryParse(userId, out long userIdLong))
+        if (!long.TryParse(existUserId, out long userIdLong))
         {
             throw new ArgumentException("Parse id exception");
         }
 
-        if (userIdLong == requestOwner.UserId)
+        if (userIdLong == userId)
         {
             return BadRequest(new BadResponse(
                Request.GetDisplayUrl(),
@@ -581,7 +581,7 @@ public class HorsesController : ControllerBase
         }
 
         HorseOwner? currentOwner = await db.HorseOwners.SingleOrDefaultAsync(
-            o => o.UserId == userIdLong && o.HorseId == requestOwner.HorseId);
+            o => o.UserId == userIdLong && o.HorseId == horseId);
 
         if (currentOwner is null)
         {
@@ -602,7 +602,7 @@ public class HorsesController : ControllerBase
         }
 
         HorseOwner? owner = await db.HorseOwners.SingleOrDefaultAsync(
-            o => o.UserId == requestOwner.UserId && o.HorseId == requestOwner.HorseId);
+            o => o.UserId == userId && o.HorseId == horseId);
 
         if (owner is null)
         {
