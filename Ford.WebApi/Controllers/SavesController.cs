@@ -83,8 +83,8 @@ public class SavesController : ControllerBase
 
     // POST api/<SavesController>/{horseId}
     // Create
-    [HttpPost("{horseId}")]
-    public async Task<ActionResult<ResponseSaveDto>> Create([FromRoute] long horseId, [FromBody] RequestCreateSaveDto requestSave)
+    [HttpPost()]
+    public async Task<ActionResult<ResponseSaveDto>> Create([Required] long horseId, [FromBody] RequestCreateSaveDto requestSave)
     {
         // get authorize user
         User? user = await tokenService.GetUserByPrincipal(User);
@@ -158,8 +158,8 @@ public class SavesController : ControllerBase
 
     // PUT api/<SavesController>/5
     // Update
-    [HttpPut("{id}")]
-    public async Task<ActionResult<ResponseSaveDto>> Update(int id, [FromBody] RequestUpdateSaveDto requestSave)
+    [HttpPut()]
+    public async Task<ActionResult<ResponseSaveDto>> Update([FromBody] RequestUpdateSaveDto requestSave)
     {
         User? user = await tokenService.GetUserByPrincipal(User);
 
@@ -168,7 +168,7 @@ public class SavesController : ControllerBase
             return Unauthorized();
         }
 
-        Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == id);
+        Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == requestSave.SaveId);
 
         if (save is null)
         {
@@ -222,8 +222,8 @@ public class SavesController : ControllerBase
     }
 
     // DELETE api/<SavesController>/5
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
+    [HttpDelete()]
+    public async Task<IActionResult> Delete([Required] int saveId)
     {
         User? user = await tokenService.GetUserByPrincipal(User);
 
@@ -232,7 +232,7 @@ public class SavesController : ControllerBase
             return Unauthorized();
         }
 
-        Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == id);
+        Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
 
         if (save is null)
         {
