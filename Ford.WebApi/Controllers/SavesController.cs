@@ -1,12 +1,15 @@
 ﻿using Ford.WebApi.Data;
 using Ford.WebApi.Data.Entities;
-using Ford.WebApi.Dtos.Save;
+using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Models;
 using Ford.WebApi.Services.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
+using Ford.WebApi.Dtos.Request;
+using System.ComponentModel.DataAnnotations;
+using Ford.WebApi.Dtos.Horse;
 
 namespace Ford.WebApi.Controllers;
 
@@ -25,8 +28,12 @@ public class SavesController : ControllerBase
     }
 
     // GET: api/<SavesController>/{horseId}
-    [HttpGet("{horseId}")]
-    public async Task<ActionResult<IEnumerable<ResponseSaveDto>>> Get(long horseId)
+    [HttpGet()]
+    [ProducesResponseType(typeof(ResponseFullSave), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<ResponseSaveDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Get([Required] long horseId, long? saveId)
     {
         User? user = await tokenService.GetUserByPrincipal(User);
 
@@ -38,50 +45,46 @@ public class SavesController : ControllerBase
         IQueryable<Save> saves = db.Saves.Where(s => s.HorseId == horseId && 
             s.Horse.HorseOwners.Any(o => o.UserId == user.Id));
 
-        List<ResponseSaveDto> savesDto = new ();
+        List<ResponseSaveDto> savesDto = new();
 
-        foreach (var save in saves)
+        if (saveId == null)
         {
+            foreach (var save in saves)
+            {
+                ResponseSaveDto saveDto = new()
+                {
+                    HorseId = save.HorseId,
+                    SaveId = save.SaveId,
+                    Header = save.Header,
+                    Description = save.Description,
+                    Date = save.Date,
+                };
+                savesDto.Add(saveDto);
+            }
+
+            return Ok(savesDto);
+        } 
+        else
+        {
+            var save = await saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
+
+            if (save == null)
+            {
+                return NotFound();
+            }
+
             var collection = db.Entry(save).Collection(s => s.SaveBones);
             await collection.LoadAsync();
 
-            if (collection.CurrentValue is null)
-                continue;
-
-            ResponseSaveDto saveDto = MapSave(save);
-            savesDto.Add(saveDto);
+            ResponseFullSave saveDto = MapSave(save);
+            return Ok(saveDto);
         }
-
-        return Ok(savesDto);
-    }
-
-    // GET api/<SavesController>/5
-    [HttpGet("{horseId}/{saveId}")]
-    public async Task<ActionResult<ResponseSaveDto>> Get(long horseId, long saveId)
-    {
-        var result = await Get(horseId);
-        var okResult = (OkObjectResult)result.Result!;
-        var saves = okResult.Value as IEnumerable<ResponseSaveDto>;
-
-        if (!saves!.Any())
-        {
-            return NotFound();
-        }
-
-        ResponseSaveDto? save = saves!.FirstOrDefault(s => s.SaveId == saveId);
-
-        if (save is null)
-        {
-            return NotFound();
-        }
-
-        return Ok(save);
     }
 
     // POST api/<SavesController>/{horseId}
     // Create
     [HttpPost("{horseId}")]
-    public async Task<ActionResult<ResponseSaveDto>> Post([FromRoute] long horseId, [FromBody] RequestCreateSaveDto requestSave)
+    public async Task<ActionResult<ResponseSaveDto>> Create([FromRoute] long horseId, [FromBody] RequestCreateSaveDto requestSave)
     {
         // get authorize user
         User? user = await tokenService.GetUserByPrincipal(User);
@@ -135,6 +138,7 @@ public class SavesController : ControllerBase
             saveBones.Add(new SaveBone
             {
                 BoneId = bone.BoneId,
+                Save = save,
 
                 PositionX = bone.Position?.X,
                 PositionY = bone.Position?.Y,
@@ -147,9 +151,7 @@ public class SavesController : ControllerBase
         }
 
         await db.SaveBones.AddRangeAsync(saveBones);
-
-        db.UpdateRange(save.SaveBones);
-        await db.Saves.AddAsync(save);
+        await db.AddAsync(save);
         await db.SaveChangesAsync();
         return Created($"api/[controller]/{horseId}/{save.SaveId}", MapSave(save));
     }
@@ -157,7 +159,7 @@ public class SavesController : ControllerBase
     // PUT api/<SavesController>/5
     // Update
     [HttpPut("{id}")]
-    public async Task<ActionResult<ResponseSaveDto>> Put(int id, [FromBody] RequestUpdateSaveDto requestSave)
+    public async Task<ActionResult<ResponseSaveDto>> Update(int id, [FromBody] RequestUpdateSaveDto requestSave)
     {
         User? user = await tokenService.GetUserByPrincipal(User);
 
@@ -208,7 +210,14 @@ public class SavesController : ControllerBase
         save.Date = requestSave.Date;
 
         await db.SaveChangesAsync();
-        var saveDto = MapSave(save);
+        var saveDto = new ResponseSaveDto()
+        {
+            SaveId = save.SaveId,
+            HorseId = save.HorseId,
+            Header = save.Header,
+            Description = save.Description,
+            Date = save.Date
+        };
         return saveDto;
     }
 
@@ -264,9 +273,9 @@ public class SavesController : ControllerBase
         return Ok();
     }
 
-    private ResponseSaveDto MapSave(Save save)
+    private ResponseFullSave MapSave(Save save)
     {
-        ResponseSaveDto responseSaveDto = new ResponseSaveDto()
+        ResponseFullSave responseSaveDto = new ResponseFullSave()
         {
             HorseId = save.HorseId,
             SaveId = save.SaveId,

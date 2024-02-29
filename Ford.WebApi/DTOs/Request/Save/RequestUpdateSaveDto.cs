@@ -1,4 +1,4 @@
-﻿namespace Ford.WebApi.Dtos.Save;
+﻿namespace Ford.WebApi.Dtos.Request;
 
 public class RequestUpdateSaveDto
 {
