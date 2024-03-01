@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using Ford.WebApi.Dtos.Request;
 using System.ComponentModel.DataAnnotations;
-using Ford.WebApi.Dtos.Horse;
+using Microsoft.AspNetCore.Identity;
 
 namespace Ford.WebApi.Controllers;
 
@@ -19,12 +19,12 @@ namespace Ford.WebApi.Controllers;
 public class SavesController : ControllerBase
 {
     private readonly FordContext db;
-    private readonly ITokenService tokenService;
+    private readonly UserManager<User> userManager;
 
-    public SavesController(FordContext db, ITokenService tokenService)
+    public SavesController(FordContext db, UserManager<User> userManager)
     {
         this.db = db;
-        this.tokenService = tokenService;
+        this.userManager = userManager;
     }
 
     // GET: api/<SavesController>/{horseId}
@@ -35,7 +35,7 @@ public class SavesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Get([Required] long horseId, long? saveId)
     {
-        User? user = await tokenService.GetUserByPrincipal(User);
+        User? user = await userManager.GetUserAsync(User);
 
         if (user is null)
         {
@@ -87,7 +87,7 @@ public class SavesController : ControllerBase
     public async Task<ActionResult<ResponseSaveDto>> Create([Required] long horseId, [FromBody] RequestCreateSaveDto requestSave)
     {
         // get authorize user
-        User? user = await tokenService.GetUserByPrincipal(User);
+        User? user = await userManager.GetUserAsync(User);
 
         if (user is null)
         {
@@ -153,7 +153,7 @@ public class SavesController : ControllerBase
         await db.SaveBones.AddRangeAsync(saveBones);
         await db.AddAsync(save);
         await db.SaveChangesAsync();
-        return Created($"api/[controller]/{horseId}/{save.SaveId}", MapSave(save));
+        return Created($"api/[controller]?horseId={horseId}&saveId={save.SaveId}", MapSave(save));
     }
 
     // PUT api/<SavesController>/5
@@ -161,7 +161,7 @@ public class SavesController : ControllerBase
     [HttpPut()]
     public async Task<ActionResult<ResponseSaveDto>> Update([FromBody] RequestUpdateSaveDto requestSave)
     {
-        User? user = await tokenService.GetUserByPrincipal(User);
+        User? user = await userManager.GetUserAsync(User);
 
         if (user is null)
         {
@@ -221,11 +221,11 @@ public class SavesController : ControllerBase
         return saveDto;
     }
 
-    // DELETE api/<SavesController>/5
+    // DELETE api/[controller]?saveId=5
     [HttpDelete()]
     public async Task<IActionResult> Delete([Required] int saveId)
     {
-        User? user = await tokenService.GetUserByPrincipal(User);
+        User? user = await userManager.GetUserAsync(User);
 
         if (user is null)
         {

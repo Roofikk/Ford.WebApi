@@ -24,8 +24,6 @@ public class IdentityController : ControllerBase
     private readonly ITokenService tokenService;
     private readonly IMapper mapper;
 
-    private static readonly TimeSpan tokenLifeTime = TimeSpan.FromHours(8);
-
     public IdentityController(FordContext db, ITokenService tokenService, UserManager<User> userManager,
         RoleManager<IdentityRole<long>> roleManager, IMapper mapper)
     {
@@ -99,9 +97,9 @@ public class IdentityController : ControllerBase
 
     [HttpPost]
     [Route("login")]
-    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(TokenDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<AuthResponse>> Login([FromBody] UserLogin request)
+    public async Task<ActionResult<TokenDto>> Login([FromBody] UserLogin request)
     {
         User? user = await userManager.FindByNameAsync(request.Login);
 
@@ -125,20 +123,45 @@ public class IdentityController : ControllerBase
                 new Collection<Error> { new("Invalid Authorization", "Login or password incorrect") }));
         }
 
-        string jwtToken = await tokenService.GenerateToken(user, tokenLifeTime);
+        var token = await tokenService.GenerateTokenAsync(user);
 
-        return new AuthResponse
+        user.RefreshToken = token.RefreshToken;
+        user.RefreshTokenExpiresDate = token.ExpiredDate;
+        await userManager.UpdateAsync(user);
+
+        return new TokenDto
         {
-            Login = request.Login,
-            Token = jwtToken,
+            Token = token.JwtToken,
+            RefreshToken= token.RefreshToken
         };
     }
 
-    [HttpGet, Authorize]
-    [Route("check")]
-    public IActionResult CheckAuth()
+    [HttpPost("refresh-token")]
+    public async Task<ActionResult<TokenDto>> RefreshToken(TokenDto requset)
     {
-        return Ok();
+        var principal = tokenService.GetPrincipalFromExpiredToken(requset.Token);
+        var user = await userManager.GetUserAsync(principal);
+
+        if (user == null || user.RefreshToken != requset.RefreshToken || user.RefreshTokenExpiresDate <= DateTime.Now)
+        {
+            return Unauthorized(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Unauthorized",
+                HttpStatusCode.Unauthorized,
+                [new("Refresh token denied", "Refresh token denied")]));
+        }
+
+        var token = await tokenService.GenerateTokenAsync(user);
+
+        user.RefreshToken = token.RefreshToken;
+        user.RefreshTokenExpiresDate = token.ExpiredDate;
+        await userManager.UpdateAsync(user);
+
+        return new TokenDto
+        {
+            Token = token.JwtToken,
+            RefreshToken = token.RefreshToken,
+        };
     }
 
     [HttpGet, Authorize]
@@ -147,9 +170,7 @@ public class IdentityController : ControllerBase
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<UserGettingDto>> GetUserInfo()
     {
-        string jwtToken = Request.Headers.Authorization!;
-
-        User? user = await tokenService.GetUserByPrincipal(User);
+        var user = await userManager.GetUserAsync(User);
 
         if (user is null)
         {
@@ -180,7 +201,7 @@ public class IdentityController : ControllerBase
                 new Collection<Error> { new("Invalid data", "Body content is incorrect") }));
         }
 
-        User? user = await tokenService.GetUserByPrincipal(User);
+        User? user = await userManager.GetUserAsync(User);
 
         if (user is null)
         {
@@ -207,12 +228,12 @@ public class IdentityController : ControllerBase
 
     [HttpPost, Authorize]
     [Route("account/password")]
-    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(TokenDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<AuthResponse>> ChangePassword([FromBody] RequestChangePassword request)
+    public async Task<ActionResult<TokenDto>> ChangePassword([FromBody] RequestChangePassword request)
     {
-        User? user = await tokenService.GetUserByPrincipal(User);
+        User? user = await userManager.GetUserAsync(User);
 
         if (user is null)
         {

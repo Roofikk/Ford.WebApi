@@ -37,17 +37,37 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(x => x.Id).ValueGeneratedOnAdd();
+
+            entity.HasIndex(x => x.UserName)
+                .HasDatabaseName("IX_UserNames")
+                .IsUnique();
+
+            entity.HasIndex(x => x.PhoneNumber)
+                .HasDatabaseName("IX_UserPhoneNumbers")
+                .IsUnique();
+
+            entity.HasIndex(x => x.Email)
+                .HasDatabaseName("IX_UserEmails")
+                .IsUnique();
+
+            entity.HasIndex(x => x.FirstName)
+                .HasDatabaseName("IX_UserFirstNames");
+
+            entity.HasIndex(x => x.LastName)
+                .HasDatabaseName("IX_UserLastNames");
         });
 
         modelBuilder.Entity<Horse>(entity =>
         {
             entity.Property(e => e.HorseId).ValueGeneratedOnAdd();
+
+            entity.HasIndex(x => x.Name)
+                .HasDatabaseName("IX_HorseNames");
         });
 
         modelBuilder.Entity<HorseOwner>(entity =>
         {
             entity.ToTable("HorseOwners");
-
             entity.HasKey(e => new { e.UserId, e.HorseId, });
 
             entity.HasOne(d => d.User)
@@ -64,16 +84,23 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
         modelBuilder.Entity<Save>(entity =>
         {
             entity.Property(e => e.SaveId).ValueGeneratedOnAdd();
+
+            entity.HasOne(d => d.Horse)
+                .WithMany(p => p.Saves)
+                .HasForeignKey(d => d.HorseId);
+
+            entity.HasOne(d => d.User)
+                .WithMany(p => p.Saves)
+                .HasForeignKey(d => d.UserId);
         });
 
         modelBuilder.Entity<SaveBone>(entity =>
         {
-            entity.HasKey(e => new { e.SaveId });
+            entity.HasKey(e => new { e.SaveBoneId });
 
             entity.HasOne(d => d.Save)
                 .WithMany(p => p.SaveBones)
-                .HasForeignKey(d => d.SaveId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(d => d.SaveId);
         });
 
         base.OnModelCreating(modelBuilder);

@@ -113,7 +113,7 @@ public class HorseProfiles : Profile
                 opt => opt.MapFrom(src => src.BirthDate))
             .ForMember(
                 dest => dest.Sex,
-                opt => opt.MapFrom(src => string.IsNullOrEmpty(src.Sex) ? Sex.None : Enum.Parse<Sex>(src.Sex)))
+                opt => opt.MapFrom(src => src.Sex))
             .ForMember(
                 dest => dest.City,
                 opt => opt.MapFrom(src => src.City))

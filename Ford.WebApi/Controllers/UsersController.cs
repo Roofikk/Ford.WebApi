@@ -3,7 +3,7 @@ using Ford.WebApi.Data;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.User;
 using Microsoft.AspNetCore.Mvc;
-using System.Data.Entity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ford.WebApi.Controllers;
 
@@ -26,7 +26,7 @@ public class UsersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(long? id)
     {
-        if (id.HasValue)
+        if (id != null)
         {
             User? user = await db.Users.SingleOrDefaultAsync(u => u.Id == id);
 
@@ -42,7 +42,7 @@ public class UsersController : ControllerBase
         }
         else
         {
-            IEnumerable<User>? users = await db.Users.ToListAsync();
+            List<User>? users = await db.Users.ToListAsync();
             return Ok(mapper.Map<IEnumerable<UserGettingDto>>(users));
         }
     }

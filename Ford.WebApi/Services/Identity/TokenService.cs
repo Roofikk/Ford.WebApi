@@ -1,10 +1,12 @@
 ﻿using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Extensions.Authentication;
+using Ford.WebApi.Models.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Ford.WebApi.Services.Identity;
@@ -14,13 +16,15 @@ public class TokenService : ITokenService
     private readonly JwtSettings _jwtSettings;
     private readonly UserManager<User> userManager;
 
+    private static readonly TimeSpan tokenLifeTime = TimeSpan.FromHours(2);
+
     public TokenService(IOptions<JwtSettings> jwtSettings, UserManager<User> userManager)
     {
         _jwtSettings = jwtSettings.Value;
         this.userManager = userManager;
     }
 
-    public async Task<string> GenerateToken(User user, TimeSpan tokenLifeTime)
+    public async Task<Token> GenerateTokenAsync(User user)
     {
         var issuer = _jwtSettings.Issuer;
         var audience = _jwtSettings.Audience;
@@ -47,20 +51,38 @@ public class TokenService : ITokenService
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var jwtToken = tokenHandler.WriteToken(tokenHandler.CreateToken(securityToken));
+        var refreshToken = GenerateRefreshToken();
 
-        return jwtToken;
+        return new Token
+        {
+            JwtToken= jwtToken,
+            RefreshToken = refreshToken,
+            ExpiredDate = DateTime.Now.AddDays(14)
+        };
     }
 
-    public async Task<User?> GetUserByPrincipal(ClaimsPrincipal claimsPrincipal)
+    public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
     {
-        string? id = GetUserId(claimsPrincipal);
-
-        if (id is null)
+        var tokenValidationParameters = new TokenValidationParameters
         {
-            return null;
+            ValidateAudience = true,
+            ValidateIssuer = true,
+            ValidateIssuerSigningKey = true,
+            ValidateLifetime = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_jwtSettings.Key)),
+            ValidIssuer = _jwtSettings.Issuer,
+            ValidAudience = _jwtSettings.Audience,
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
+
+        if (securityToken is not JwtSecurityToken jwtSecurityToken)
+        {
+            throw new SecurityTokenException("Invalid Token");
         }
 
-        return await userManager.FindByIdAsync(id);
+        return principal;
     }
 
     public string? GetUserId(ClaimsPrincipal claimsPrincipal)
@@ -74,5 +96,10 @@ public class TokenService : ITokenService
         }
 
         return claimUserId.Value;
+    }
+
+    private string GenerateRefreshToken()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
     }
 }
