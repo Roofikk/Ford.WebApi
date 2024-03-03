@@ -1,4 +1,6 @@
-﻿namespace Ford.WebApi.Dtos.Horse;
+﻿using Ford.WebApi.Dtos.Response;
+
+namespace Ford.WebApi.Dtos.Horse;
 
 public class HorseRetrievingDto
 {
@@ -11,7 +13,9 @@ public class HorseRetrievingDto
     public string? Region { get; set; }
     public string? Country { get; set; }
     public DateTime CreationDate { get; set; }
-    public IEnumerable<OwnerDto>? Users { get; set; }
+    public DateTime LastUpdate { get; set; }
+    public ICollection<OwnerDto> Users { get; set; } = null!;
+    public ICollection<ResponseSaveDto> Saves { get; set; } = null!;
 }
 
 public class OwnerDto

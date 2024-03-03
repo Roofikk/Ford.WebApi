@@ -16,7 +16,7 @@ public class TokenService : ITokenService
     private readonly JwtSettings _jwtSettings;
     private readonly UserManager<User> userManager;
 
-    private static readonly TimeSpan tokenLifeTime = TimeSpan.FromHours(2);
+    private static readonly TimeSpan tokenLifeTime = TimeSpan.FromSeconds(5);
 
     public TokenService(IOptions<JwtSettings> jwtSettings, UserManager<User> userManager)
     {
@@ -57,7 +57,7 @@ public class TokenService : ITokenService
         {
             JwtToken= jwtToken,
             RefreshToken = refreshToken,
-            ExpiredDate = DateTime.Now.AddDays(14)
+            ExpiredDate = DateTime.UtcNow.AddDays(14)
         };
     }
 
@@ -68,7 +68,8 @@ public class TokenService : ITokenService
             ValidateAudience = true,
             ValidateIssuer = true,
             ValidateIssuerSigningKey = true,
-            ValidateLifetime = true,
+            RequireExpirationTime = false,
+            ValidateLifetime = false,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_jwtSettings.Key)),
             ValidIssuer = _jwtSettings.Issuer,
             ValidAudience = _jwtSettings.Audience,

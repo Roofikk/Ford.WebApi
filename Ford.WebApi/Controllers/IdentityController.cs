@@ -57,8 +57,8 @@ public class IdentityController : ControllerBase
             LastName = request.LastName,
             Email = request.Email,
             BirthDate = request.BirthDate,
-            CreationDate = DateTime.Now,
-            LastUpdatedDate = DateTime.Now
+            CreationDate = DateTime.UtcNow,
+            LastUpdatedDate = DateTime.UtcNow
         };
 
         IdentityResult result = await userManager.CreateAsync(user, request.Password);
@@ -142,7 +142,7 @@ public class IdentityController : ControllerBase
         var principal = tokenService.GetPrincipalFromExpiredToken(requset.Token);
         var user = await userManager.GetUserAsync(principal);
 
-        if (user == null || user.RefreshToken != requset.RefreshToken || user.RefreshTokenExpiresDate <= DateTime.Now)
+        if (user == null || user.RefreshToken != requset.RefreshToken || user.RefreshTokenExpiresDate <= DateTime.UtcNow)
         {
             return Unauthorized(new BadResponse(
                 Request.GetDisplayUrl(),
