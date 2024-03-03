@@ -57,9 +57,11 @@ builder.Services.AddIdentity<User, IdentityRole<long>>(opts =>
 {
     opts.Password.RequiredLength = 6;
     opts.Password.RequireUppercase = false;
-    opts.Password.RequireLowercase = true;
+    opts.Password.RequireLowercase = false;
     opts.Password.RequireDigit = false;
     opts.Password.RequireNonAlphanumeric = false;
+
+    opts.User.RequireUniqueEmail = true;
 }).AddEntityFrameworkStores<FordContext>()
     .AddUserManager<UserManager<User>>()
     .AddSignInManager<SignInManager<User>>()
