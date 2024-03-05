@@ -10,4 +10,5 @@ public class RequestHorseOwner
 {
     public long UserId { get; set; }
     public string RuleAccess { get; set; } = null!;
+    public bool IsOwner { get; set; }
 }

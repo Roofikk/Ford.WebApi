@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Ford.WebApi.Data.Entities;
 
-public class HorseOwner
+public class UserHorse
 {
     [Key]
     public long HorseId { get; set; }
@@ -12,7 +12,7 @@ public class HorseOwner
     // переименовать в AccessRole
     [Column(TypeName = "nvarchar(8)")]
     public string RuleAccess { get; set; } = null!;
-
+    public bool IsOwner { get; set; } = false;
     public User User { get; set; } = null!;
     public Horse Horse { get; set; } = null!;
 }

@@ -2,8 +2,10 @@
 using Ford.WebApi.Data;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.User;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace Ford.WebApi.Controllers;
 
@@ -11,13 +13,13 @@ namespace Ford.WebApi.Controllers;
 [ApiController]
 public class UsersController : ControllerBase
 {
-    private readonly IMapper mapper;
     private readonly FordContext db;
+    private readonly UserManager<User> userManager;
 
-    public UsersController(FordContext context, IMapper mapper)
+    public UsersController(FordContext context, UserManager<User> userManager)
     {
         db = context;
-        this.mapper = mapper;
+        this.userManager = userManager;
     }
 
     [HttpGet()]
@@ -36,62 +38,38 @@ public class UsersController : ControllerBase
             }
             else
             {
-                var mappingUser = mapper.Map<UserGettingDto>(user);
-                return Ok(mappingUser);
+                var userDto = MapUser(user);
+                return Ok(userDto);
             }
         }
         else
         {
             List<User>? users = await db.Users.ToListAsync();
-            return Ok(mapper.Map<IEnumerable<UserGettingDto>>(users));
+            List<UserGettingDto> usersDto = new List<UserGettingDto>();
+
+            foreach (var user in users)
+            {
+                usersDto.Add(MapUser(user));
+            }
+
+            return Ok(usersDto);
         }
     }
 
-    //[HttpPost]
-    //[ProducesResponseType(StatusCodes.Status201Created)]
-    //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-    //public async Task<ActionResult<UserGettingDto>> Create([FromBody] UserCreationDto user)
-    //{
-    //    User sourceUser = mapper.Map<User>(user);
-    //    var existUser = db.Users.SingleOrDefaultAsync(u => u.Id == user.)
+    [HttpGet("search")]
+    public async Task<ActionResult<UserGettingDto>> FindUser([Required] string userName)
+    {
+        var user = await userManager.FindByNameAsync(userName);
 
-    //    if (await db.IsExistAsync(sourceUser))
-    //    {
-    //        return BadRequest("User already exists");
-    //    }
-        
-    //    User? created = await db.CreateAsync(sourceUser);
-        
-    //    if (created is null)
-    //    {
-    //        return BadRequest();
-    //    }
-
-    //    await db.SaveAsync();
-
-    //    UserGettingDto responseUser = mapper.Map<UserGettingDto>(created);
-    //    return CreatedAtAction(nameof(Get), new { id = created.Id }, responseUser);
-    //}
-
-    //[HttpPut]
-    //[ProducesResponseType(StatusCodes.Status200OK)]
-    //[ProducesResponseType(StatusCodes.Status400BadRequest)]
-    //[ProducesResponseType(StatusCodes.Status404NotFound)]
-    //public async Task<ActionResult<UserGettingDto>> Update([FromBody]UserForUpdateDto user)
-    //{
-    //    User sourceUser = mapper.Map<User>(user);
-
-    //    User? updated = await db.UpdateAsync(sourceUser);
-
-    //    if (updated is null)
-    //    {
-    //        return NotFound(user);
-    //    }
-
-    //    await db.SaveAsync();
-    //    UserGettingDto response = mapper.Map<UserGettingDto>(updated);
-    //    return Ok(response);
-    //}
+        if (user == null)
+        {
+            return NotFound();
+        }
+        else
+        {
+            return Ok(MapUser(user));
+        }
+    }
 
     [HttpDelete]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -111,5 +89,26 @@ public class UsersController : ControllerBase
         {
             return NotFound();
         }
+    }
+
+    private UserGettingDto MapUser(User user)
+    {
+        var userDto = new UserGettingDto()
+        {
+            UserId = user.Id,
+            Login = user.UserName!,
+            Email = user.Email,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            BirthDate = user.BirthDate,
+            City = user.City,
+            Region = user.Region,
+            Country = user.Country,
+            CreationDate = user.CreationDate,
+            LastUpdatedDate = user.LastUpdatedDate,
+            PhoneNumber = user.PhoneNumber,
+        };
+
+        return userDto;
     }
 }

@@ -3,14 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using Microsoft.AspNetCore.Authorization;
-using Ford.WebApi.Models.Horse;
 using System.Collections.ObjectModel;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Dtos.Horse;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Net;
-using Ford.WebApi.Dtos.Request;
 using Microsoft.AspNetCore.Identity;
 
 namespace Ford.WebApi.Controllers;
@@ -49,8 +47,8 @@ public class HorsesController : ControllerBase
         if (horseId == null)
         {
             IEnumerable<Horse> horses = db.Horses
-                .Where(h => h.HorseOwners.Any(o => o.UserId == user.Id))
-                .Include(h => h.HorseOwners)
+                .Where(h => h.Users.Any(o => o.UserId == user.Id))
+                .Include(h => h.Users)
                 .ThenInclude(o => o.User)
                 .Skip(beginSelection)
                 .Take(count)
@@ -122,18 +120,33 @@ public class HorsesController : ControllerBase
             LastUpdate = DateTime.UtcNow
         };
 
-        //Add current user
-        horse.HorseOwners.Add(new HorseOwner
+        // adding yourself
+        UserHorse horseUser = new()
         {
             Horse = horse,
             UserId = user.Id,
-            RuleAccess = OwnerAccessRole.Creator.ToString()
-        });
+            RuleAccess = OwnerAccessRole.Creator.ToString(),
+        };
 
-        if (requestHorse.HorseOwners is not null)
+        var ownerDto = requestHorse.UserHorses.SingleOrDefault(o => o.UserId == user.Id && o.IsOwner);
+
+        if (ownerDto == null)
+        {
+            horseUser.IsOwner = true;
+        }
+        else
+        {
+            horseUser.IsOwner = false;
+        }
+
+        ownerDto = requestHorse.UserHorses.SingleOrDefault(o => o.UserId != user.Id && o.IsOwner);
+
+        horse.Users.Add(horseUser);
+
+        if (requestHorse.UserHorses is not null)
         {
             //Check the possibility of granting role to an object
-            var check = requestHorse.HorseOwners.Where(hw => Enum.Parse<OwnerAccessRole>(hw.RuleAccess) >= OwnerAccessRole.Creator);
+            var check = requestHorse.UserHorses.Where(hw => Enum.Parse<OwnerAccessRole>(hw.RuleAccess) >= OwnerAccessRole.Creator);
 
             if (check.Any())
             {
@@ -145,51 +158,33 @@ public class HorsesController : ControllerBase
             }
 
             //Find exist user in DB
-            IEnumerable<User> containsUsers = db.Users.Include(u => u.HorseOwners)
-                .Where(u => requestHorse.HorseOwners
+            IEnumerable<User> containsUsers = db.Users
+                .Where(u => requestHorse.UserHorses
                 .Select(o => o.UserId).Contains(u.Id));
 
-            if (containsUsers.Any() && containsUsers.Count() == requestHorse.HorseOwners.Count())
+            if (containsUsers.Any() && containsUsers.Count() == requestHorse.UserHorses.Count())
             {
-                foreach (var horseOwner in requestHorse.HorseOwners)
+                foreach (var reqUser in requestHorse.UserHorses)
                 {
-                    //Skip current user which was added early
-                    if (horseOwner.UserId == user.Id)
+                    // skip current user which was added early
+                    if (reqUser.UserId == user.Id)
                         continue;
                     
-                    if (!Enum.TryParse(horseOwner.RuleAccess, true, out OwnerAccessRole role))
+                    if (!Enum.TryParse(reqUser.RuleAccess, true, out OwnerAccessRole role))
                     {
                         return BadRequest(new BadResponse(
                             Request.GetDisplayUrl(),
                             "Role Access",
                             HttpStatusCode.BadRequest,
-                            new Collection<Error> { new("Invalid Role", $"Role {horseOwner.RuleAccess} invalid") }));
+                            new Collection<Error> { new("Invalid Role", $"Role {reqUser.RuleAccess} invalid") }));
                     }
 
-                    switch (role)
-                    {
-                        case OwnerAccessRole.Read:
-                            horseOwner.RuleAccess = OwnerAccessRole.Read.ToString();
-                            break;
-                        case OwnerAccessRole.Write:
-                            horseOwner.RuleAccess = OwnerAccessRole.Write.ToString();
-                            break;
-                        case OwnerAccessRole.All:
-                            horseOwner.RuleAccess = OwnerAccessRole.All.ToString();
-                            break;
-                        default:
-                            return BadRequest(new BadResponse(
-                                Request.GetDisplayUrl(),
-                                "Role Access",
-                                HttpStatusCode.BadRequest,
-                                new Collection<Error> { new("Invalid Role", $"Role {role} not exists or does not apply to user") }));
-                    }
-
-                    horse.HorseOwners.Add(new HorseOwner
+                    horse.Users.Add(new UserHorse
                     {
                         Horse = horse,
-                        UserId = horseOwner.UserId,
-                        RuleAccess = horseOwner.RuleAccess.ToString(),
+                        UserId = reqUser.UserId,
+                        RuleAccess = reqUser.RuleAccess.ToString(),
+                        IsOwner = reqUser.IsOwner
                     });
                 }
             }
@@ -203,341 +198,18 @@ public class HorsesController : ControllerBase
             }
         }
 
+        var findOwner = horse.Users.SingleOrDefault(u => u.IsOwner);
+
+        if (findOwner == null)
+        {
+            horse.OwnerName = requestHorse.OwnerName;
+            horse.OwnerPhoneNumber = requestHorse.OwnerPhoneNumber;
+        }
+
         var entry = db.Horses.Add(horse);
         await db.SaveChangesAsync();
 
         return Created($"api/[controller]/horseId={horse.HorseId}", await MapHorse(entry.Entity));
-    }
-
-    [HttpPost]
-    [Route("owners")]
-    [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<HorseRetrievingDto>> UpdateHorseOwnersAsync([FromBody] RequestUpdateHorseOwners requestHorseOwners)
-    {
-        var user = await userManager.GetUserAsync(User);
-
-        if (user == null)
-        {
-            return Unauthorized(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Unauthorized",
-                HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
-        }
-
-        //Search existing horse owner
-        HorseOwner? currentOwner = await db.HorseOwners.FirstOrDefaultAsync(
-            hw => hw.User == user && hw.HorseId == requestHorseOwners.HorseId);
-
-        if (currentOwner is null)
-        {
-            return BadRequest("You do not have access to this object");
-        }
-
-        OwnerAccessRole currentOwnerRole = Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true);
-
-        //Check access to update
-        if (currentOwnerRole < OwnerAccessRole.All)
-        {
-            return BadRequest("Access denied");
-        }
-
-        Horse? horse = await db.Horses.Include(h => h.HorseOwners)
-            .FirstOrDefaultAsync(h => h.HorseId == requestHorseOwners.HorseId);
-
-        if (horse is null)
-        {
-            return BadRequest("Horse not found");
-        }
-
-        Collection<HorseOwner> newOwners = new();
-
-        foreach (var reqOwner in requestHorseOwners.HorseOwners)
-        {
-            if (reqOwner.UserId == user.Id)
-                continue;
-
-            if (!Enum.TryParse(reqOwner.RuleAccess, true, out OwnerAccessRole role))
-            {
-                return BadRequest(new BadResponse(
-                    Request.GetDisplayUrl(),
-                    "Role Access",
-                    HttpStatusCode.BadRequest,
-                    new Collection<Error> { new("Invalid Role", $"Role {reqOwner.RuleAccess} invalid") }));
-            }
-
-            if (role >= Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true))
-            {
-                return BadRequest(new BadResponse(
-                    Request.GetDisplayUrl(),
-                    "Role Access",
-                    HttpStatusCode.BadRequest,
-                    new Collection<Error> { new("Invalid Role", $"You can't add a role that is higher than yours") }));
-            }
-
-            newOwners.Add(new HorseOwner
-            {
-                UserId = reqOwner.UserId,
-                HorseId = requestHorseOwners.HorseId,
-                RuleAccess = reqOwner.RuleAccess
-            });
-        }
-
-        newOwners.Add(currentOwner);
-
-        await db.HorseOwners.AddRangeAsync(newOwners);
-        await db.SaveChangesAsync();
-
-        return await MapHorse(horse);
-    }
-
-    [HttpPost]
-    [Route("add-owner")]
-    [ProducesResponseType(typeof(OwnerDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<OwnerDto>> AddOwnerAsync([FromBody] CreationHorseOwner requestOwner)
-    {
-        var user = await userManager.GetUserAsync(User);
-
-        if (user == null)
-        {
-            return Unauthorized(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Unauthorized",
-                HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
-        }
-
-        requestOwner.OwnerAccessRole ??= OwnerAccessRole.Read.ToString();
-
-        if (!Enum.TryParse(requestOwner.OwnerAccessRole, true, out OwnerAccessRole role))
-        {
-            return BadRequest(new BadResponse(
-               Request.GetDisplayUrl(),
-               "Argument Exception",
-               HttpStatusCode.BadRequest,
-               new Collection<Error> { new("Rule Access", $"Impossible argument {requestOwner.OwnerAccessRole}") }));
-        }
-
-        HorseOwner? currentOwner = await db.HorseOwners.SingleOrDefaultAsync(
-            o => o.User == user && o.HorseId == requestOwner.HorseId);
-
-        if (currentOwner is null)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Access",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Not found", "Horse not exists or permission denied for it") }));
-        }
-
-        if (Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true) < OwnerAccessRole.All)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Access",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Permission denied", "Permission denied for the object") }));
-        }
-
-        User? newOwner = await db.Users
-            .Include(u => u.HorseOwners)
-            .SingleOrDefaultAsync(u => u.Id == requestOwner.UserId);
-
-        if (newOwner is null)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Not Found",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Not Found", $"User (id: {requestOwner.UserId}) not found") }));
-        }
-
-        HorseOwner? existOwner = newOwner.HorseOwners.SingleOrDefault(o => o.HorseId == requestOwner.HorseId);
-
-        if (existOwner is not null)
-        {
-            return BadRequest(new BadResponse(
-               Request.GetDisplayUrl(),
-               "Owner exists",
-               HttpStatusCode.BadRequest,
-               new Collection<Error> { new("Owner exists", $"Adding owner is already exists") }));
-        }
-
-        if (role >= Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true))
-        {
-            return BadRequest(new BadResponse(
-               Request.GetDisplayUrl(),
-               "Bad argument",
-               HttpStatusCode.BadRequest,
-               new Collection<Error> { new("Access Role", $"Owner role cannot be equal or above than yours") }));
-        }
-
-        db.HorseOwners.Add(new HorseOwner()
-        {
-            HorseId = requestOwner.HorseId,
-            UserId = requestOwner.UserId,
-            RuleAccess = requestOwner.OwnerAccessRole.ToString(),
-        });
-
-        await db.SaveChangesAsync();
-
-        return Created(Request.GetDisplayUrl(), new OwnerDto()
-        {
-            Id = requestOwner.UserId,
-            FirstName = newOwner.FirstName,
-            LastName = newOwner.LastName,
-            OwnerAccessRole = requestOwner.OwnerAccessRole.ToString()
-        });
-    }
-
-    [HttpPost]
-    [Route("change-owner-role")]
-    public async Task<ActionResult<OwnerDto>> ChangeOwnerRoleAccessAsync(CreationHorseOwner requestOwner)
-    {
-        var user = await userManager.GetUserAsync(User);
-
-        if (user == null)
-        {
-            return Unauthorized(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Unauthorized",
-                HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
-        }
-
-        requestOwner.OwnerAccessRole ??= OwnerAccessRole.Read.ToString();
-
-        if (!Enum.TryParse(requestOwner.OwnerAccessRole, true, out OwnerAccessRole role))
-        {
-            return BadRequest(new BadResponse(
-               Request.GetDisplayUrl(),
-               "Argument Exception",
-               HttpStatusCode.BadRequest,
-               new Collection<Error> { new("Rule Access", $"Impossible argument {requestOwner.OwnerAccessRole}") }));
-        }
-
-        if (user.Id == requestOwner.UserId)
-        {
-            return BadRequest(new BadResponse(
-               Request.GetDisplayUrl(),
-               "Argumet incorrect",
-               HttpStatusCode.BadRequest,
-               new Collection<Error> { new("Change yourself", $"You can't change yourself") }));
-        }
-
-        HorseOwner? currentOwner = await db.HorseOwners.SingleOrDefaultAsync(
-            o => o.User == user && o.HorseId == requestOwner.HorseId);
-
-        if (currentOwner is null)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Access",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Not found", "Horse not exists or permission denied for it") }));
-        }
-
-        if (Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true) < OwnerAccessRole.All)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Access",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Permission denied", "Permission denied for the object") }));
-        }
-
-        HorseOwner? owner = await db.HorseOwners.SingleOrDefaultAsync(
-            o => o.UserId == requestOwner.UserId && o.HorseId == requestOwner.HorseId);
-
-        if (owner is null)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Object not exists",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Horse owner not exists", "Horse owner not exists") }));
-        }
-
-        owner.RuleAccess = requestOwner.OwnerAccessRole;
-        await db.SaveChangesAsync();
-
-        var reference = db.Entry(owner).Reference(o => o.User);
-        await reference.LoadAsync();
-
-        return Ok(new OwnerDto()
-        {
-            Id = owner.UserId,
-            FirstName = owner.User.FirstName,
-            LastName = owner.User.LastName,
-            OwnerAccessRole = owner.RuleAccess
-        });
-    }
-
-    [HttpDelete]
-    [Route("owners")]
-    public async Task<ActionResult> DeleteOwnerAsync(long horseId, long userId)
-    {
-        var user = await userManager.GetUserAsync(User);
-
-        if (user == null)
-        {
-            return Unauthorized(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Unauthorized",
-                HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
-        }
-
-        if (user.Id == userId)
-        {
-            return BadRequest(new BadResponse(
-               Request.GetDisplayUrl(),
-               "Argumet incorrect",
-               HttpStatusCode.BadRequest,
-               new Collection<Error> { new("Delete yourself", $"You can't delete yourself") }));
-        }
-
-        HorseOwner? currentOwner = await db.HorseOwners.SingleOrDefaultAsync(
-            o => o.User == user && o.HorseId == horseId);
-
-        if (currentOwner is null)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Access",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Not found", "Horse not exists or permission denied for it") }));
-        }
-
-        if (Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true) < OwnerAccessRole.All)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Access",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Permission denied", "Permission denied for the object") }));
-        }
-
-        HorseOwner? owner = await db.HorseOwners.SingleOrDefaultAsync(
-            o => o.UserId == userId && o.HorseId == horseId);
-
-        if (owner is null)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Object not exists",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Horse owner not exists", "Horse owner not exists") }));
-        }
-
-        db.Remove(owner);
-        await db.SaveChangesAsync();
-
-        return Ok();
     }
 
     [HttpPut]
@@ -557,7 +229,7 @@ public class HorsesController : ControllerBase
                 new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
-        Horse? entity = await db.Horses.Include(h => h.HorseOwners)
+        Horse? entity = await db.Horses.Include(h => h.Users)
             .FirstOrDefaultAsync(h => h.HorseId == horse.HorseId);
 
         if (entity == null)
@@ -569,7 +241,7 @@ public class HorsesController : ControllerBase
                 new Collection<Error> { new("Object non-existent", $"Horse (id: {horse.HorseId}) not found") }));
         }
 
-        HorseOwner? owner = entity.HorseOwners.SingleOrDefault(o => o.User == user && o.HorseId == horse.HorseId);
+        UserHorse? owner = entity.Users.SingleOrDefault(o => o.User == user && o.HorseId == horse.HorseId);
 
         if (owner is null)
         {
@@ -615,7 +287,7 @@ public class HorsesController : ControllerBase
                 new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
-        HorseOwner? owner = db.HorseOwners.SingleOrDefault(o => o.User == user && o.HorseId == id);
+        UserHorse? owner = db.HorseOwners.SingleOrDefault(o => o.User == user && o.HorseId == id);
 
         if (owner is null)
         {
@@ -670,9 +342,9 @@ public class HorsesController : ControllerBase
 
         horseDto.Users = new List<OwnerDto>();
 
-        if (horse.HorseOwners != null)
+        if (horse.Users != null)
         {
-            foreach (var owner in horse.HorseOwners)
+            foreach (var owner in horse.Users)
             {
                 horseDto.Users.Add(new()
                 {
@@ -685,7 +357,7 @@ public class HorsesController : ControllerBase
         }
         else
         {
-            var ownersCollection = db.Entry(horse).Collection(h => h.HorseOwners);
+            var ownersCollection = db.Entry(horse).Collection(h => h.Users);
             foreach (var owner in ownersCollection.CurrentValue!)
             {
                 await db.Entry(owner).Reference(o => o.User).LoadAsync();

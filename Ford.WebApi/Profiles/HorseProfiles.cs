@@ -39,9 +39,9 @@ public class HorseProfiles : Profile
                 opt => opt.MapFrom(src => src.CreationDate))
             .ForMember(
                 dest => dest.Users,
-                opt => opt.MapFrom(src => src.HorseOwners));
+                opt => opt.MapFrom(src => src.Users));
 
-        CreateMap<HorseOwner, OwnerDto>()
+        CreateMap<UserHorse, OwnerDto>()
             .ForMember(
                 dest => dest.Id,
                 opt => opt.MapFrom(src => src.UserId))
@@ -95,8 +95,8 @@ public class HorseProfiles : Profile
                 dest => dest.Saves,
                 opt => opt.MapFrom(src => new Collection<Save>()))
             .ForMember(
-                dest => dest.HorseOwners,
-                opt => opt.MapFrom(src => new Collection<HorseOwner>()));
+                dest => dest.Users,
+                opt => opt.MapFrom(src => new Collection<UserHorse>()));
 
         CreateMap<HorseForUpdateDto, Horse>()
             .ForMember(

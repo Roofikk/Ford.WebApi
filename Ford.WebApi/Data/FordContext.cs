@@ -21,7 +21,7 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
     public virtual DbSet<Horse> Horses { get; set; } = null!;
     public virtual DbSet<Save> Saves { get; set; } = null!;
     public virtual DbSet<SaveBone> SaveBones { get; set; } = null!;
-    public virtual DbSet<HorseOwner> HorseOwners { get; set; } = null!;
+    public virtual DbSet<UserHorse> HorseOwners { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -69,9 +69,9 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
                 .HasDatabaseName("IX_HorseNames");
         });
 
-        modelBuilder.Entity<HorseOwner>(entity =>
+        modelBuilder.Entity<UserHorse>(entity =>
         {
-            entity.ToTable("HorseOwners");
+            entity.ToTable("UserHorses");
             entity.HasKey(e => new { e.UserId, e.HorseId, });
 
             entity.HasOne(d => d.User)
@@ -80,7 +80,7 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(d => d.Horse)
-                .WithMany(p => p.HorseOwners)
+                .WithMany(p => p.Users)
                 .HasForeignKey(d => d.HorseId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

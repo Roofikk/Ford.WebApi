@@ -43,7 +43,7 @@ public class SavesController : ControllerBase
         }
 
         IQueryable<Save> saves = db.Saves.Where(s => s.HorseId == horseId && 
-            s.Horse.HorseOwners.Any(o => o.UserId == user.Id));
+            s.Horse.Users.Any(o => o.UserId == user.Id));
 
         List<ResponseSaveDto> savesDto = new();
 
@@ -99,7 +99,7 @@ public class SavesController : ControllerBase
             return BadRequest("Save object can not have empty list bones");
         }
 
-        HorseOwner? owner = await db.HorseOwners.SingleOrDefaultAsync(o => o.UserId == user.Id && o.HorseId == horseId);
+        UserHorse? owner = await db.HorseOwners.SingleOrDefaultAsync(o => o.UserId == user.Id && o.HorseId == horseId);
 
         if (owner is null)
         {
@@ -185,7 +185,7 @@ public class SavesController : ControllerBase
         }
 
         // get owners by horse
-        var collection = db.Entry(horseReference.CurrentValue!).Collection(h => h.HorseOwners);
+        var collection = db.Entry(horseReference.CurrentValue!).Collection(h => h.Users);
         await collection.LoadAsync();
 
         if (!collection.IsLoaded)
@@ -193,7 +193,7 @@ public class SavesController : ControllerBase
             return BadRequest();
         }
 
-        HorseOwner? owner = collection.CurrentValue!.SingleOrDefault(o => o.UserId == user.Id);
+        UserHorse? owner = collection.CurrentValue!.SingleOrDefault(o => o.UserId == user.Id);
 
         if (owner is null)
         {
@@ -248,7 +248,7 @@ public class SavesController : ControllerBase
             return BadRequest();
         }
 
-        var collection = db.Entry(saveReference.CurrentValue!).Collection(h => h.HorseOwners);
+        var collection = db.Entry(saveReference.CurrentValue!).Collection(h => h.Users);
         await collection.LoadAsync();
 
         if (!collection.IsLoaded)
@@ -256,7 +256,7 @@ public class SavesController : ControllerBase
             return BadRequest();
         }
 
-        HorseOwner? owner = collection.CurrentValue!.SingleOrDefault(o => o.UserId == user.Id);
+        UserHorse? owner = collection.CurrentValue!.SingleOrDefault(o => o.UserId == user.Id);
 
         if (owner is null)
         {

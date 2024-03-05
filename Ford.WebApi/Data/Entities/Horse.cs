@@ -8,7 +8,7 @@ public class Horse
     public Horse()
     {
         Saves = new HashSet<Save>();
-        HorseOwners = new HashSet<HorseOwner>();
+        Users = new HashSet<UserHorse>();
     }
 
     [Key]
@@ -32,8 +32,13 @@ public class Horse
     public DateTime CreationDate { get; set; }
     [Column(TypeName = "datetime")]
     public DateTime LastUpdate { get; set; }
+    [Column(TypeName = "varchar(32)")]
+    public string? OwnerName { get; set; }
+    [Column(TypeName = "varchar(32)")]
+    public string? OwnerPhoneNumber { get; set; }
+
 
     public virtual ICollection<Save> Saves { get; }
 
-    public virtual ICollection<HorseOwner> HorseOwners { get; }
+    public virtual ICollection<UserHorse> Users { get; }
 }

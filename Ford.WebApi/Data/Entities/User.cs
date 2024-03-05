@@ -42,6 +42,6 @@ public class User : IdentityUser<long>
     public DateTime RefreshTokenExpiresDate { get; set; }
 
     [InverseProperty("User")]
-    public virtual ICollection<HorseOwner> HorseOwners { get; }
+    public virtual ICollection<UserHorse> HorseOwners { get; }
     public virtual ICollection<Save> Saves { get; }
 }
