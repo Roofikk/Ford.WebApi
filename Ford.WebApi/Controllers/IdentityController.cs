@@ -5,7 +5,6 @@ using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using Ford.WebApi.Services.Identity;
 using Ford.WebApi.Dtos.User;
-using AutoMapper;
 using Ford.WebApi.Models.Identity;
 using Ford.WebApi.Dtos.Response;
 using System.Net;
@@ -22,16 +21,14 @@ public class IdentityController : ControllerBase
     private readonly UserManager<User> userManager;
     private readonly RoleManager<IdentityRole<long>> roleManager;
     private readonly ITokenService tokenService;
-    private readonly IMapper mapper;
 
     public IdentityController(FordContext db, ITokenService tokenService, UserManager<User> userManager,
-        RoleManager<IdentityRole<long>> roleManager, IMapper mapper)
+        RoleManager<IdentityRole<long>> roleManager)
     {
         this.db = db;
         this.tokenService = tokenService;
         this.userManager = userManager;
         this.roleManager = roleManager;
-        this.mapper = mapper;
     }
 
     [HttpPost]
@@ -90,7 +87,22 @@ public class IdentityController : ControllerBase
         }
 
         await userManager.AddToRoleAsync(findUser, Roles.Member);
-        var userDto = mapper.Map<UserGettingDto>(user);
+
+        UserGettingDto userDto = new()
+        {
+            UserId = user.Id,
+            Login = user.UserName!,
+            Email = user.Email,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            BirthDate = user.BirthDate,
+            PhoneNumber = user.PhoneNumber,
+            City = user.City,
+            Region = user.Region,
+            Country = user.Country,
+            CreationDate = user.CreationDate,
+            LastUpdatedDate = user.LastUpdatedDate,
+        };
 
         return userDto;
     }
@@ -181,7 +193,21 @@ public class IdentityController : ControllerBase
                 new Collection<Error> { new("User's token", "Token is invalid") }));
         }
 
-        UserGettingDto userDto = mapper.Map<UserGettingDto>(user);
+        UserGettingDto userDto = new()
+        {
+            UserId = user.Id,
+            Login = user.UserName!,
+            Email = user.Email,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            BirthDate = user.BirthDate,
+            PhoneNumber = user.PhoneNumber,
+            City = user.City,
+            Region = user.Region,
+            Country = user.Country,
+            CreationDate = user.CreationDate,
+            LastUpdatedDate = user.LastUpdatedDate,
+        };
         return userDto;
     }
 
@@ -216,13 +242,29 @@ public class IdentityController : ControllerBase
         user.LastName = request.LastName;
         user.City = request.City;
         user.Region = request.Region;
+        user.PhoneNumber = request.PhoneNumber;
         user.Country = request.Country;
         user.BirthDate = request.BirthDate is null ? null : request.BirthDate;
         user.LastUpdatedDate = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
 
-        UserGettingDto userDto = mapper.Map<UserGettingDto>(user);
+
+        UserGettingDto userDto = new()
+        {
+            UserId = user.Id,
+            Login = user.UserName!,
+            Email = user.Email,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            BirthDate = user.BirthDate,
+            PhoneNumber = user.PhoneNumber,
+            City = user.City,
+            Region = user.Region,
+            Country = user.Country,
+            CreationDate = user.CreationDate,
+            LastUpdatedDate = user.LastUpdatedDate,
+        };
         return Ok(userDto);
     }
 
