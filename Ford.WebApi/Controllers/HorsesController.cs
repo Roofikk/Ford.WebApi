@@ -143,7 +143,7 @@ public class HorsesController : ControllerBase
 
         horse.Users.Add(horseUser);
 
-        if (requestHorse.UserHorses is not null)
+        if (requestHorse.UserHorses.Any())
         {
             //Check the possibility of granting role to an object
             var check = requestHorse.UserHorses.Where(hw => Enum.Parse<OwnerAccessRole>(hw.RuleAccess) >= OwnerAccessRole.Creator);
@@ -340,7 +340,7 @@ public class HorsesController : ControllerBase
             CreationDate = horse.CreationDate,
         };
 
-        horseDto.Users = new List<OwnerDto>();
+        horseDto.Users = new List<HorseUserDto>();
 
         if (horse.Users != null)
         {
@@ -351,7 +351,9 @@ public class HorsesController : ControllerBase
                     Id = owner.UserId,
                     FirstName = owner.User.FirstName,
                     LastName = owner.User.LastName,
-                    OwnerAccessRole = owner.RuleAccess
+                    PhoneNumber = owner.User.PhoneNumber,
+                    IsOwner = owner.IsOwner,
+                    AccessRole = owner.RuleAccess
                 });
             }
         }
@@ -367,7 +369,9 @@ public class HorsesController : ControllerBase
                     Id = owner.UserId,
                     FirstName = owner.User.FirstName,
                     LastName = owner.User.LastName,
-                    OwnerAccessRole = owner.RuleAccess
+                    PhoneNumber = owner.User.PhoneNumber,
+                    IsOwner = owner.IsOwner,
+                    AccessRole = owner.RuleAccess
                 });
             }
         }

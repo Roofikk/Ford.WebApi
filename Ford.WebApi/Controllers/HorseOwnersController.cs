@@ -105,10 +105,10 @@ namespace Ford.WebApi.Controllers
 
         [HttpPost]
         [Route("add-owner")]
-        [ProducesResponseType(typeof(OwnerDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(HorseUserDto), StatusCodes.Status201Created)]
         [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<OwnerDto>> AddOwnerAsync([FromBody] CreationHorseOwner requestOwner)
+        public async Task<ActionResult<HorseUserDto>> AddOwnerAsync([FromBody] CreationHorseOwner requestOwner)
         {
             var user = await userManager.GetUserAsync(User);
 
@@ -195,21 +195,23 @@ namespace Ford.WebApi.Controllers
 
             await db.SaveChangesAsync();
 
-            return Created(Request.GetDisplayUrl(), new OwnerDto()
+            return Created(Request.GetDisplayUrl(), new HorseUserDto()
             {
                 Id = requestOwner.UserId,
                 FirstName = newOwner.FirstName,
                 LastName = newOwner.LastName,
-                OwnerAccessRole = requestOwner.OwnerAccessRole.ToString()
+                PhoneNumber = newOwner.PhoneNumber,
+                IsOwner = false,
+                AccessRole = requestOwner.OwnerAccessRole.ToString()
             });
         }
 
         [HttpPost]
         [Route("change-owner-role")]
-        [ProducesResponseType(typeof(OwnerDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(HorseUserDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<OwnerDto>> ChangeOwnerRoleAccessAsync(CreationHorseOwner requestOwner)
+        public async Task<ActionResult<HorseUserDto>> ChangeOwnerRoleAccessAsync(CreationHorseOwner requestOwner)
         {
             var user = await userManager.GetUserAsync(User);
 
@@ -281,12 +283,14 @@ namespace Ford.WebApi.Controllers
             var reference = db.Entry(owner).Reference(o => o.User);
             await reference.LoadAsync();
 
-            return Ok(new OwnerDto()
+            return Ok(new HorseUserDto()
             {
                 Id = owner.UserId,
                 FirstName = owner.User.FirstName,
                 LastName = owner.User.LastName,
-                OwnerAccessRole = owner.RuleAccess
+                PhoneNumber = owner.User.PhoneNumber,
+                IsOwner = owner.IsOwner,
+                AccessRole = owner.RuleAccess
             });
         }
 

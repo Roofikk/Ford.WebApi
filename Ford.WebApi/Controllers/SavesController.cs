@@ -2,7 +2,6 @@
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Models;
-using Ford.WebApi.Services.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

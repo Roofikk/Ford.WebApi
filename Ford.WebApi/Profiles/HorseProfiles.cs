@@ -41,12 +41,12 @@ public class HorseProfiles : Profile
                 dest => dest.Users,
                 opt => opt.MapFrom(src => src.Users));
 
-        CreateMap<UserHorse, OwnerDto>()
+        CreateMap<UserHorse, HorseUserDto>()
             .ForMember(
                 dest => dest.Id,
                 opt => opt.MapFrom(src => src.UserId))
             .ForMember(
-                dest => dest.OwnerAccessRole,
+                dest => dest.AccessRole,
                 opt => opt.MapFrom(src => src.RuleAccess))
             .ForMember(
                 dest => dest.FirstName,
@@ -55,7 +55,7 @@ public class HorseProfiles : Profile
                 dest => dest.LastName,
                 opt => opt.MapFrom(src => src.User.LastName));
 
-        CreateMap<User, OwnerDto>()
+        CreateMap<User, HorseUserDto>()
             .ForMember(
                 dest => dest.Id,
                 opt => opt.MapFrom(src => src.Id.ToString()))

@@ -14,12 +14,15 @@ public class User : IdentityUser<long>
 
     [Column(TypeName = "varchar(64)")]
     public override string? UserName { get => base.UserName; set => base.UserName = value; }
-    [RegularExpression(@"^([\+]?(?:00)?[0-9]{1,3}[\s.-]?[0-9]{1,12})([\s.-]?[0-9]{1,4}?)$")]
+    [Column(TypeName = "varchar(64)")]
+    public override string? NormalizedUserName { get => base.NormalizedUserName; set => base.NormalizedUserName = value; }
     [Column(TypeName = "varchar(32)")]
+    [RegularExpression(@"^([\+]?[0-9]{0,3}[-\s.]?[(\s]?[0-9]{3}[)\s]?[-\s.]?([0-9]{2,3}[-\s]?){2}[0-9]{2})$")]
     public override string? PhoneNumber { get => base.PhoneNumber; set => base.PhoneNumber = value; }
     [Column(TypeName = "varchar(64)")]
     public override string? Email { get => base.Email; set => base.Email = value; }
-
+    [Column(TypeName = "varchar(64)")]
+    public override string? NormalizedEmail { get => base.NormalizedEmail; set => base.NormalizedEmail = value; }
     [Column(TypeName = "varchar(64)")]
     public string FirstName { get; set; } = null!;
     [Column(TypeName = "varchar(64)")]

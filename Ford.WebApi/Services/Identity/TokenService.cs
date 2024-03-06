@@ -16,7 +16,7 @@ public class TokenService : ITokenService
     private readonly JwtSettings _jwtSettings;
     private readonly UserManager<User> userManager;
 
-    private static readonly TimeSpan tokenLifeTime = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan tokenLifeTime = TimeSpan.FromHours(4);
 
     public TokenService(IOptions<JwtSettings> jwtSettings, UserManager<User> userManager)
     {
