@@ -14,8 +14,8 @@ public class HorseRetrievingDto
     public string? Country { get; set; }
     public DateTime CreationDate { get; set; }
     public DateTime LastUpdate { get; set; }
-    public ICollection<HorseUserDto> Users { get; set; } = null!;
-    public ICollection<ResponseSaveDto> Saves { get; set; } = null!;
+    public ICollection<HorseUserDto> Users { get; set; } = [];
+    public ICollection<ResponseSaveDto> Saves { get; set; } = [];
 }
 
 public class HorseUserDto

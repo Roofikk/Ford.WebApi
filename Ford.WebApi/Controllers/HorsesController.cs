@@ -31,7 +31,7 @@ public class HorsesController : ControllerBase
     [ProducesResponseType(typeof(RetrieveArray<HorseRetrievingDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult> GetAsync(long? horseId, int beginSelection = 0, int count = 20)
+    public async Task<ActionResult> GetAsync(long? horseId, int below = 0, int above = 20)
     {
         var user = await userManager.GetUserAsync(User);
 
@@ -50,8 +50,8 @@ public class HorsesController : ControllerBase
                 .Where(h => h.Users.Any(o => o.UserId == user.Id))
                 .Include(h => h.Users)
                 .ThenInclude(o => o.User)
-                .Skip(beginSelection)
-                .Take(count)
+                .Skip(below)
+                .Take(above)
                 .AsEnumerable();
 
             List<HorseRetrievingDto> horsesDto = [];
@@ -121,32 +121,21 @@ public class HorsesController : ControllerBase
         };
 
         // adding yourself
-        UserHorse horseUser = new()
+        if (!requestHorse.Users.Any(u => u.UserId == user.Id))
         {
-            Horse = horse,
-            UserId = user.Id,
-            RuleAccess = OwnerAccessRole.Creator.ToString(),
-        };
-
-        var ownerDto = requestHorse.UserHorses.SingleOrDefault(o => o.UserId == user.Id && o.IsOwner);
-
-        if (ownerDto == null)
-        {
-            horseUser.IsOwner = true;
-        }
-        else
-        {
-            horseUser.IsOwner = false;
+            horse.Users.Add(new()
+            {
+                UserId = user.Id,
+                RuleAccess = OwnerAccessRole.Creator.ToString(),
+                IsOwner = false,
+            });
         }
 
-        ownerDto = requestHorse.UserHorses.SingleOrDefault(o => o.UserId != user.Id && o.IsOwner);
-
-        horse.Users.Add(horseUser);
-
-        if (requestHorse.UserHorses.Any())
+        if (requestHorse.Users.Any(u => u.UserId != user.Id))
         {
             //Check the possibility of granting role to an object
-            var check = requestHorse.UserHorses.Where(hw => Enum.Parse<OwnerAccessRole>(hw.RuleAccess) >= OwnerAccessRole.Creator);
+            var check = requestHorse.Users
+                .Where(u => u.UserId != user.Id && Enum.Parse<OwnerAccessRole>(u.RuleAccess) >= OwnerAccessRole.Creator);
 
             if (check.Any())
             {
@@ -159,12 +148,12 @@ public class HorsesController : ControllerBase
 
             //Find exist user in DB
             IEnumerable<User> containsUsers = db.Users
-                .Where(u => requestHorse.UserHorses
+                .Where(u => requestHorse.Users
                 .Select(o => o.UserId).Contains(u.Id));
 
-            if (containsUsers.Any() && containsUsers.Count() == requestHorse.UserHorses.Count())
+            if (containsUsers.Any() && containsUsers.Count() == requestHorse.Users.Count())
             {
-                foreach (var reqUser in requestHorse.UserHorses)
+                foreach (var reqUser in requestHorse.Users)
                 {
                     // skip current user which was added early
                     if (reqUser.UserId == user.Id)
@@ -204,6 +193,18 @@ public class HorsesController : ControllerBase
         {
             horse.OwnerName = requestHorse.OwnerName;
             horse.OwnerPhoneNumber = requestHorse.OwnerPhoneNumber;
+        }
+
+        // push saves
+        foreach (var save in requestHorse.Saves)
+        {
+            horse.Saves.Add(new()
+            {
+                Header = save.Header,
+                Description = save.Description,
+                Date = save.Date == null ? DateTime.Now : save.Date,
+                User = user,
+            });
         }
 
         var entry = db.Horses.Add(horse);

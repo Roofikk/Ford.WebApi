@@ -18,7 +18,8 @@ public class User : IdentityUser<long>
     public override string? NormalizedUserName { get => base.NormalizedUserName; set => base.NormalizedUserName = value; }
     [Column(TypeName = "varchar(32)")]
     [RegularExpression(@"^([\+]?[0-9]{0,3}[-\s.]?[(\s]?[0-9]{3}[)\s]?[-\s.]?([0-9]{2,3}[-\s]?){2}[0-9]{2})$")]
-    public override string? PhoneNumber { get => base.PhoneNumber; set => base.PhoneNumber = value; }
+    public override string? PhoneNumber
+    { get => base.PhoneNumber; set => base.PhoneNumber = value; }
     [Column(TypeName = "varchar(64)")]
     public override string? Email { get => base.Email; set => base.Email = value; }
     [Column(TypeName = "varchar(64)")]

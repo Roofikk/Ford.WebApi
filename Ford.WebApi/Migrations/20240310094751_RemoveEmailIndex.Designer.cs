@@ -3,6 +3,7 @@ using System;
 using Ford.WebApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Ford.WebApi.Migrations
 {
     [DbContext(typeof(FordContext))]
-    partial class FordContextModelSnapshot : ModelSnapshot
+    [Migration("20240310094751_RemoveEmailIndex")]
+    partial class RemoveEmailIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.1");
@@ -222,6 +225,7 @@ namespace Ford.WebApi.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
+                        .IsUnique()
                         .HasDatabaseName("IX_UserEmails");
 
                     b.HasIndex("FirstName")
@@ -231,6 +235,7 @@ namespace Ford.WebApi.Migrations
                         .HasDatabaseName("IX_UserLastNames");
 
                     b.HasIndex("NormalizedEmail")
+                        .IsUnique()
                         .HasDatabaseName("EmailIndex");
 
                     b.HasIndex("NormalizedUserName")

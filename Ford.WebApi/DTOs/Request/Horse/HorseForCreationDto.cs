@@ -1,4 +1,5 @@
-﻿using Ford.WebApi.Models.Horse;
+﻿using Ford.WebApi.Dtos.Request;
+using Ford.WebApi.Models.Horse;
 
 namespace Ford.WebApi.Dtos.Horse;
 
@@ -13,5 +14,6 @@ public class HorseForCreationDto
     public string? Country { get; set; }
     public string? OwnerName { get; set; }
     public string? OwnerPhoneNumber { get; set; }
-    public IEnumerable<RequestHorseOwner> UserHorses { get; set; } = [];
+    public ICollection<RequestUpdateSaveDto> Saves { get; set; } = [];
+    public ICollection<RequestHorseOwner> Users { get; set; } = [];
 }

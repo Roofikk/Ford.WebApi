@@ -43,12 +43,10 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
                 .IsUnique();
 
             entity.HasIndex(x => x.Email)
-                .HasDatabaseName("IX_UserEmails")
-                .IsUnique();
+                .HasDatabaseName("IX_UserEmails");
 
             entity.HasIndex(x => x.NormalizedEmail)
-                .HasDatabaseName("IX_NormalizedUserEmails")
-                .IsUnique();
+                .HasDatabaseName("IX_NormalizedUserEmails");
 
             entity.HasIndex(x => x.FirstName)
                 .HasDatabaseName("IX_UserFirstNames");
