@@ -121,13 +121,15 @@ public class SavesController : ControllerBase
             return NotFound("Horse not found");
         }
 
-        Save save = new Save
+        Save save = new()
         {
             Header = requestSave.Header,
             Description = requestSave.Description,
             Date = requestSave.Date,
             User = user,
             Horse = horse,
+            CreationDate = requestSave.CreationDate ?? DateTime.UtcNow,
+            LastUpdate = requestSave.LastUpdate ?? DateTime.UtcNow,
         };
 
         ICollection<SaveBone> saveBones = new Collection<SaveBone>();
@@ -207,6 +209,7 @@ public class SavesController : ControllerBase
         save.Header = requestSave.Header;
         save.Description = requestSave.Description;
         save.Date = requestSave.Date;
+        save.LastUpdate = requestSave.LastUpdate ?? DateTime.UtcNow;
 
         await db.SaveChangesAsync();
         var saveDto = new ResponseSaveDto()
@@ -215,7 +218,9 @@ public class SavesController : ControllerBase
             HorseId = save.HorseId,
             Header = save.Header,
             Description = save.Description,
-            Date = save.Date
+            Date = save.Date,
+            CreationDate = save.CreationDate,
+            LastUpdate = save.LastUpdate,
         };
         return saveDto;
     }

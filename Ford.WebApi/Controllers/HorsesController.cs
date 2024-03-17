@@ -10,6 +10,7 @@ using Ford.WebApi.Dtos.Horse;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Net;
 using Microsoft.AspNetCore.Identity;
+using System.Security.AccessControl;
 
 namespace Ford.WebApi.Controllers;
 
@@ -47,11 +48,11 @@ public class HorsesController : ControllerBase
         if (horseId == null)
         {
             IEnumerable<Horse> horses = db.Horses
-                .Where(h => h.Users.Any(o => o.UserId == user.Id))
                 .Include(h => h.Users)
                 .ThenInclude(o => o.User)
+                .Where(h => h.Users.Any(o => o.UserId == user.Id))
                 .Skip(below)
-                .Take(above)
+                .Take(above - below)
                 .AsEnumerable();
 
             List<HorseRetrievingDto> horsesDto = [];
@@ -120,8 +121,70 @@ public class HorsesController : ControllerBase
             LastUpdate = DateTime.UtcNow
         };
 
-        // adding yourself
-        if (!requestHorse.Users.Any(u => u.UserId == user.Id))
+        //Check the possibility of granting role to an object
+        var check = requestHorse.Users
+            .Where(u => u.UserId != user.Id && Enum.Parse<OwnerAccessRole>(u.RuleAccess) >= OwnerAccessRole.Creator);
+
+        if (check.Any())
+        {
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Role Access",
+                HttpStatusCode.BadRequest,
+                new Collection<Error> { new("Invalid Role", "Some roles access can not be greater or equal than your") }));
+        }
+
+        //Find exist user in DB
+        IEnumerable<User> containsUsers = db.Users
+            .Where(u => requestHorse.Users
+            .Select(o => o.UserId)
+            .Contains(u.Id));
+
+        if (containsUsers.Count() == requestHorse.Users.Count())
+        {
+            foreach (var reqUser in requestHorse.Users)
+            {
+                // add yourself
+                if (reqUser.UserId == user.Id)
+                {
+                    horse.Users.Add(new()
+                    {
+                        UserId = reqUser.UserId,
+                        RuleAccess = OwnerAccessRole.Creator.ToString(),
+                        IsOwner = reqUser.IsOwner,
+                    });
+
+                    continue;
+                }
+                    
+                if (!Enum.TryParse(reqUser.RuleAccess, true, out OwnerAccessRole role))
+                {
+                    return BadRequest(new BadResponse(
+                        Request.GetDisplayUrl(),
+                        "Role Access",
+                        HttpStatusCode.BadRequest,
+                        new Collection<Error> { new("Invalid Role", $"Role {reqUser.RuleAccess} invalid") }));
+                }
+
+                horse.Users.Add(new()
+                {
+                    UserId = reqUser.UserId,
+                    RuleAccess = reqUser.RuleAccess.ToString(),
+                    IsOwner = reqUser.IsOwner,
+                });
+            }
+        }
+        else
+        {
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Bad request",
+                HttpStatusCode.BadRequest,
+                new Collection<Error> { new("Users not found", "Some users not found") }));
+        }
+
+        // add yourserl
+        if (!horse.Users.Any(u => u.UserId == user.Id))
         {
             horse.Users.Add(new()
             {
@@ -129,62 +192,6 @@ public class HorsesController : ControllerBase
                 RuleAccess = OwnerAccessRole.Creator.ToString(),
                 IsOwner = false,
             });
-        }
-
-        if (requestHorse.Users.Any(u => u.UserId != user.Id))
-        {
-            //Check the possibility of granting role to an object
-            var check = requestHorse.Users
-                .Where(u => u.UserId != user.Id && Enum.Parse<OwnerAccessRole>(u.RuleAccess) >= OwnerAccessRole.Creator);
-
-            if (check.Any())
-            {
-                return BadRequest(new BadResponse(
-                    Request.GetDisplayUrl(),
-                    "Role Access",
-                    HttpStatusCode.BadRequest,
-                    new Collection<Error> { new("Invalid Role", "Some roles access can not be greater or equal than your") }));
-            }
-
-            //Find exist user in DB
-            IEnumerable<User> containsUsers = db.Users
-                .Where(u => requestHorse.Users
-                .Select(o => o.UserId).Contains(u.Id));
-
-            if (containsUsers.Any() && containsUsers.Count() == requestHorse.Users.Count())
-            {
-                foreach (var reqUser in requestHorse.Users)
-                {
-                    // skip current user which was added early
-                    if (reqUser.UserId == user.Id)
-                        continue;
-                    
-                    if (!Enum.TryParse(reqUser.RuleAccess, true, out OwnerAccessRole role))
-                    {
-                        return BadRequest(new BadResponse(
-                            Request.GetDisplayUrl(),
-                            "Role Access",
-                            HttpStatusCode.BadRequest,
-                            new Collection<Error> { new("Invalid Role", $"Role {reqUser.RuleAccess} invalid") }));
-                    }
-
-                    horse.Users.Add(new UserHorse
-                    {
-                        Horse = horse,
-                        UserId = reqUser.UserId,
-                        RuleAccess = reqUser.RuleAccess.ToString(),
-                        IsOwner = reqUser.IsOwner
-                    });
-                }
-            }
-            else
-            {
-                return BadRequest(new BadResponse(
-                    Request.GetDisplayUrl(),
-                    "Bad request",
-                    HttpStatusCode.BadRequest,
-                    new Collection<Error> { new("Users not found", "Some users not found") }));
-            }
         }
 
         var findOwner = horse.Users.SingleOrDefault(u => u.IsOwner);
@@ -202,7 +209,9 @@ public class HorsesController : ControllerBase
             {
                 Header = save.Header,
                 Description = save.Description,
-                Date = save.Date == null ? DateTime.Now : save.Date,
+                Date = save.Date,
+                CreationDate = save.CreationDate ?? DateTime.UtcNow,
+                LastUpdate = save.LastUpdate ?? DateTime.UtcNow,
                 User = user,
             });
         }
@@ -338,7 +347,10 @@ public class HorsesController : ControllerBase
             City = horse.City,
             Region = horse.Region,
             Country = horse.Country,
+            OwnerName = horse.OwnerName,
+            OwnerPhoneNumber = horse.OwnerPhoneNumber,
             CreationDate = horse.CreationDate,
+            LastUpdate = horse.LastUpdate,
         };
 
         horseDto.Users = new List<HorseUserDto>();
@@ -347,10 +359,15 @@ public class HorsesController : ControllerBase
         {
             foreach (var owner in horse.Users)
             {
+                if (owner.User == null)
+                {
+                    await db.Entry(owner).Reference(o => o.User).LoadAsync();
+                }
+
                 horseDto.Users.Add(new()
                 {
                     Id = owner.UserId,
-                    FirstName = owner.User.FirstName,
+                    FirstName = owner.User!.FirstName,
                     LastName = owner.User.LastName,
                     PhoneNumber = owner.User.PhoneNumber,
                     IsOwner = owner.IsOwner,
@@ -386,9 +403,13 @@ public class HorsesController : ControllerBase
             horseDto.Saves.Add(new()
             {
                 SaveId = save.SaveId,
+                HorseId = horse.HorseId,
+                UserId = save.UserId,
                 Header = save.Header,
                 Description = save.Description,
                 Date = save.Date,
+                CreationDate = save.CreationDate,
+                LastUpdate = save.LastUpdate,
             });
         }
 

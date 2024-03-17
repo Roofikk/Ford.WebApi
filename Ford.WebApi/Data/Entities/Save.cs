@@ -20,7 +20,11 @@ public class Save
     [Column(TypeName = "TEXT")]
     public string? Description { get; set; }
     [Column(TypeName = "datetime")]
-    public DateTime? Date { get; set; }
+    public DateTime Date { get; set; }
+    [Column(TypeName = "datetime")]
+    public DateTime CreationDate { get; set; }
+    [Column(TypeName = "datetime")]
+    public DateTime LastUpdate { get; set; }
 
     public virtual Horse Horse { get; set; } = null!;
     public virtual User User { get; set; } = null!;
