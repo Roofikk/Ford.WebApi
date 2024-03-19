@@ -32,7 +32,7 @@ public class SavesController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ResponseSaveDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Get([Required] long horseId, long? saveId)
+    public async Task<IActionResult> Get([Required] long horseId, long? saveId, int below = 0, int amount = 20)
     {
         User? user = await userManager.GetUserAsync(User);
 
@@ -41,13 +41,16 @@ public class SavesController : ControllerBase
             return Unauthorized();
         }
 
-        IQueryable<Save> saves = db.Saves.Where(s => s.HorseId == horseId && 
-            s.Horse.Users.Any(o => o.UserId == user.Id));
-
         List<ResponseSaveDto> savesDto = new();
 
         if (saveId == null)
         {
+            IEnumerable<Save> saves = db.Saves.Where(s => s.HorseId == horseId &&
+                s.Horse.Users.Any(o => o.UserId == user.Id))
+                .Skip(below)
+                .Take(amount)
+                .AsEnumerable();
+
             foreach (var save in saves)
             {
                 ResponseSaveDto saveDto = new()
@@ -65,7 +68,7 @@ public class SavesController : ControllerBase
         } 
         else
         {
-            var save = await saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
+            var save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
 
             if (save == null)
             {
@@ -83,7 +86,7 @@ public class SavesController : ControllerBase
     // POST api/<SavesController>/{horseId}
     // Create
     [HttpPost()]
-    public async Task<ActionResult<ResponseSaveDto>> Create([Required] long horseId, [FromBody] RequestCreateSaveDto requestSave)
+    public async Task<ActionResult<ResponseSaveDto>> Create([FromBody] RequestCreateSaveDto requestSave)
     {
         // get authorize user
         User? user = await userManager.GetUserAsync(User);
@@ -98,7 +101,8 @@ public class SavesController : ControllerBase
             return BadRequest("Save object can not have empty list bones");
         }
 
-        UserHorse? owner = await db.HorseOwners.SingleOrDefaultAsync(o => o.UserId == user.Id && o.HorseId == horseId);
+        UserHorse? owner = await db.HorseOwners.SingleOrDefaultAsync(
+            o => o.UserId == user.Id && o.HorseId == requestSave.HorseId);
 
         if (owner is null)
         {
@@ -113,7 +117,7 @@ public class SavesController : ControllerBase
         }
 
         var reference = db.Entry(owner).Reference(o => o.Horse);
-        reference.Load();
+        await reference.LoadAsync();
         Horse? horse = reference.CurrentValue;
 
         if (horse is null)
@@ -128,8 +132,8 @@ public class SavesController : ControllerBase
             Date = requestSave.Date,
             User = user,
             Horse = horse,
-            CreationDate = requestSave.CreationDate ?? DateTime.UtcNow,
-            LastUpdate = requestSave.LastUpdate ?? DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+            LastUpdate = DateTime.UtcNow,
         };
 
         ICollection<SaveBone> saveBones = new Collection<SaveBone>();
@@ -151,10 +155,12 @@ public class SavesController : ControllerBase
             });
         }
 
+        horse.LastUpdate = DateTime.UtcNow;
+
         await db.SaveBones.AddRangeAsync(saveBones);
         await db.AddAsync(save);
         await db.SaveChangesAsync();
-        return Created($"api/[controller]?horseId={horseId}&saveId={save.SaveId}", MapSave(save));
+        return Created($"api/[controller]?horseId={requestSave.HorseId}&saveId={save.SaveId}", MapSave(save));
     }
 
     // PUT api/<SavesController>/5

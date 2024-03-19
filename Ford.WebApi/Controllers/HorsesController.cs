@@ -10,7 +10,6 @@ using Ford.WebApi.Dtos.Horse;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Net;
 using Microsoft.AspNetCore.Identity;
-using System.Security.AccessControl;
 
 namespace Ford.WebApi.Controllers;
 
@@ -32,7 +31,8 @@ public class HorsesController : ControllerBase
     [ProducesResponseType(typeof(RetrieveArray<HorseRetrievingDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult> GetAsync(long? horseId, int below = 0, int above = 20)
+    public async Task<ActionResult> GetAsync(long? horseId, int below = 0, int amount = 20, 
+        string orderByDate = "desc", string orderByName = "false")
     {
         var user = await userManager.GetUserAsync(User);
 
@@ -42,17 +42,36 @@ public class HorsesController : ControllerBase
                 Request.GetDisplayUrl(),
                 "Unauthorized",
                 HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
+                [new("Unauthorized", "User unauthorized")]));
         }
 
         if (horseId == null)
         {
-            IEnumerable<Horse> horses = db.Horses
-                .Include(h => h.Users)
-                .ThenInclude(o => o.User)
-                .Where(h => h.Users.Any(o => o.UserId == user.Id))
+            var queryableHorses = db.Horses.Where(h => h.Users.Any(o => o.UserId == user.Id));
+
+            switch (orderByDate)
+            {
+                case "true":
+                    queryableHorses = queryableHorses.OrderBy(o => o.LastUpdate);
+                    break;
+                case "desc":
+                    queryableHorses = queryableHorses.OrderByDescending(o => o.LastUpdate);
+                    break;
+            }
+
+            switch (orderByName)
+            {
+                case "true":
+                    queryableHorses = queryableHorses.OrderBy(o => o.Name);
+                    break;
+                case "desc":
+                    queryableHorses = queryableHorses.OrderByDescending(o => o.Name);
+                    break;
+            }
+
+            IEnumerable<Horse> horses = queryableHorses
                 .Skip(below)
-                .Take(above - below)
+                .Take(amount)
                 .AsEnumerable();
 
             List<HorseRetrievingDto> horsesDto = [];
@@ -284,7 +303,7 @@ public class HorsesController : ControllerBase
     }
 
     [HttpDelete]
-    public async Task<IActionResult> DeleteAsync(long id)
+    public async Task<IActionResult> DeleteAsync(long horseId)
     {
         var user = await userManager.GetUserAsync(User);
 
@@ -297,7 +316,7 @@ public class HorsesController : ControllerBase
                 new Collection<Error> { new("Unauthorized", "User unauthorized") }));
         }
 
-        UserHorse? owner = db.HorseOwners.SingleOrDefault(o => o.User == user && o.HorseId == id);
+        UserHorse? owner = db.HorseOwners.SingleOrDefault(o => o.UserId == user.Id && o.HorseId == horseId);
 
         if (owner is null)
         {
@@ -355,7 +374,7 @@ public class HorsesController : ControllerBase
 
         horseDto.Users = new List<HorseUserDto>();
 
-        if (horse.Users != null)
+        if (horse.Users.Count > 0)
         {
             foreach (var owner in horse.Users)
             {
@@ -377,19 +396,20 @@ public class HorsesController : ControllerBase
         }
         else
         {
-            var ownersCollection = db.Entry(horse).Collection(h => h.Users);
-            foreach (var owner in ownersCollection.CurrentValue!)
+            var usersCollection = db.Entry(horse).Collection(h => h.Users);
+            await usersCollection.LoadAsync();
+            foreach (var user in usersCollection.CurrentValue!)
             {
-                await db.Entry(owner).Reference(o => o.User).LoadAsync();
+                await db.Entry(user).Reference(o => o.User).LoadAsync();
 
                 horseDto.Users.Add(new()
                 {
-                    Id = owner.UserId,
-                    FirstName = owner.User.FirstName,
-                    LastName = owner.User.LastName,
-                    PhoneNumber = owner.User.PhoneNumber,
-                    IsOwner = owner.IsOwner,
-                    AccessRole = owner.RuleAccess
+                    Id = user.UserId,
+                    FirstName = user.User.FirstName,
+                    LastName = user.User.LastName,
+                    PhoneNumber = user.User.PhoneNumber,
+                    IsOwner = user.IsOwner,
+                    AccessRole = user.RuleAccess
                 });
             }
         }

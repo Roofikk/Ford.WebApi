@@ -3,9 +3,8 @@
 public class RequestCreateSaveDto
 {
     public string Header { get; set; } = null!;
+    public long HorseId { get; set; }
     public string? Description { get; set; }
     public DateTime Date { get; set; }
-    public DateTime? CreationDate { get; set; }
-    public DateTime? LastUpdate { get; set; }
     public ICollection<BoneDto> Bones { get; set; } = null!;
 }
