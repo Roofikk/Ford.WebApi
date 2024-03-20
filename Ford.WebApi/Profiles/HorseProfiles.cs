@@ -47,7 +47,7 @@ public class HorseProfiles : Profile
                 opt => opt.MapFrom(src => src.UserId))
             .ForMember(
                 dest => dest.AccessRole,
-                opt => opt.MapFrom(src => src.RuleAccess))
+                opt => opt.MapFrom(src => src.AccessRole))
             .ForMember(
                 dest => dest.FirstName,
                 opt => opt.MapFrom(src => src.User.FirstName))

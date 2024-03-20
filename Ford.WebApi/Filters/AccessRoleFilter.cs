@@ -4,7 +4,6 @@ using Ford.WebApi.Dtos.Horse;
 using Ford.WebApi.Dtos.Request;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using System.Data.Entity;
 
 namespace Ford.WebApi.Filters
@@ -58,7 +57,7 @@ namespace Ford.WebApi.Filters
                 return;
             }
 
-            var accessRole = Enum.Parse<UserAccessRole>(horseUser.RuleAccess);
+            var accessRole = Enum.Parse<UserAccessRole>(horseUser.AccessRole);
 
             if (accessRole < _minimalAccessRole)
             {

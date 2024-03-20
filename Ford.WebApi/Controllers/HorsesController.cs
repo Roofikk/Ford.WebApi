@@ -20,13 +20,15 @@ namespace Ford.WebApi.Controllers;
 public class HorsesController : ControllerBase
 {
     private readonly FordContext db;
-    private ISaveRepository _saveService;
+    private readonly ISaveRepository _saveService;
+    private readonly IUserHorseRepository _horseUserService;
     private User? user = null;
 
-    public HorsesController(FordContext db, ISaveRepository saveRepository)
+    public HorsesController(FordContext db, ISaveRepository saveRepository, IUserHorseRepository userHorseRepository)
     {
         this.db = db;
         _saveService = saveRepository;
+        _horseUserService = userHorseRepository;
     }
 
     [HttpGet()]
@@ -126,7 +128,7 @@ public class HorsesController : ControllerBase
 
         //Check the possibility of granting role to an object
         var check = requestHorse.Users
-            .Where(u => u.UserId != user.Id && Enum.Parse<UserAccessRole>(u.RuleAccess) >= UserAccessRole.Creator);
+            .Where(u => u.UserId != user.Id && Enum.Parse<UserAccessRole>(u.AccessRole) >= UserAccessRole.Creator);
 
         if (check.Any())
         {
@@ -137,65 +139,18 @@ public class HorsesController : ControllerBase
                 new Collection<Error> { new("Invalid Role", "Some roles access can not be greater or equal than your") }));
         }
 
-        //Find exist user in DB
-        IEnumerable<User> containsUsers = db.Users
-            .Where(u => requestHorse.Users
-            .Select(o => o.UserId)
-            .Contains(u.Id));
+        var result = _horseUserService.Create(user, horse, requestHorse.Users);
 
-        if (containsUsers.Count() == requestHorse.Users.Count())
-        {
-            foreach (var reqUser in requestHorse.Users)
-            {
-                // add yourself
-                if (reqUser.UserId == user.Id)
-                {
-                    horse.Users.Add(new()
-                    {
-                        UserId = reqUser.UserId,
-                        RuleAccess = UserAccessRole.Creator.ToString(),
-                        IsOwner = reqUser.IsOwner,
-                    });
-
-                    continue;
-                }
-
-                if (!Enum.TryParse(reqUser.RuleAccess, true, out UserAccessRole role))
-                {
-                    return BadRequest(new BadResponse(
-                        Request.GetDisplayUrl(),
-                        "Role Access",
-                        HttpStatusCode.BadRequest,
-                        new Collection<Error> { new("Invalid Role", $"Role {reqUser.RuleAccess} invalid") }));
-                }
-
-                horse.Users.Add(new()
-                {
-                    UserId = reqUser.UserId,
-                    RuleAccess = reqUser.RuleAccess.ToString(),
-                    IsOwner = reqUser.IsOwner,
-                });
-            }
-        }
-        else
+        if (!result.Success)
         {
             return BadRequest(new BadResponse(
                 Request.GetDisplayUrl(),
-                "Bad request",
+                "Add users error",
                 HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Users not found", "Some users not found") }));
+                [new("Exception", result.ErrorMessage!)]));
         }
 
-        // add yourserl
-        if (!horse.Users.Any(u => u.UserId == user.Id))
-        {
-            horse.Users.Add(new()
-            {
-                UserId = user.Id,
-                RuleAccess = UserAccessRole.Creator.ToString(),
-                IsOwner = false,
-            });
-        }
+        horse = result.Result!;
 
         var findOwner = horse.Users.SingleOrDefault(u => u.IsOwner);
 
@@ -205,19 +160,18 @@ public class HorsesController : ControllerBase
             horse.OwnerPhoneNumber = requestHorse.OwnerPhoneNumber;
         }
 
-        // push saves
-        foreach (var save in requestHorse.Saves)
+        var creaeteSaveResult = _saveService.Create(horse, requestHorse.Saves, user.Id);
+
+        if (!creaeteSaveResult.Success)
         {
-            horse.Saves.Add(new()
-            {
-                Header = save.Header,
-                Description = save.Description,
-                Date = save.Date,
-                CreationDate = DateTime.UtcNow,
-                LastUpdate = DateTime.UtcNow,
-                User = user,
-            });
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Add saves error",
+                HttpStatusCode.BadRequest,
+                [new("Exception", result.ErrorMessage!)]));
         }
+
+        horse = result.Result!;
 
         var entry = db.Horses.Add(horse);
         await db.SaveChangesAsync();
@@ -251,8 +205,21 @@ public class HorsesController : ControllerBase
         entity.Region = requestHorse.Region;
         entity.Country = requestHorse.Country;
 
-        await db.SaveChangesAsync();
+        var result = await _horseUserService.UpdateAsync(user!.Id, entity, requestHorse.Users);
 
+        if (!result.Success)
+        {
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "Update users error",
+                HttpStatusCode.BadRequest,
+                [new("Exception", result.ErrorMessage!)]));
+        }
+
+        entity = result.Result!;
+        db.Entry(entity).State = EntityState.Modified;
+
+        await db.SaveChangesAsync();
         return await MapHorse(entity);
     }
 
@@ -263,7 +230,7 @@ public class HorsesController : ControllerBase
         user ??= (User)HttpContext.Items["user"]!;
         var horseUser = (UserHorse)HttpContext.Items["horseUser"]!;
 
-        if (Enum.Parse<UserAccessRole>(horseUser.RuleAccess, true) == UserAccessRole.Creator)
+        if (Enum.Parse<UserAccessRole>(horseUser.AccessRole, true) == UserAccessRole.Creator)
         {
             Horse horse = await db.Horses.SingleAsync(h => h.HorseId == horseId);
             db.Remove(horse);
@@ -295,8 +262,6 @@ public class HorsesController : ControllerBase
             LastUpdate = horse.LastUpdate,
         };
 
-        horseDto.Users = new List<HorseUserDto>();
-
         if (horse.Users.Count > 0)
         {
             foreach (var owner in horse.Users)
@@ -313,7 +278,7 @@ public class HorsesController : ControllerBase
                     LastName = owner.User.LastName,
                     PhoneNumber = owner.User.PhoneNumber,
                     IsOwner = owner.IsOwner,
-                    AccessRole = owner.RuleAccess
+                    AccessRole = owner.AccessRole
                 });
             }
         }
@@ -333,7 +298,7 @@ public class HorsesController : ControllerBase
                         FirstName = user.User.FirstName,
                         LastName = user.User.LastName,
                         PhoneNumber = user.User.PhoneNumber,
-                        AccessRole = user.RuleAccess,
+                        AccessRole = user.AccessRole,
                         IsOwner = user.IsOwner,
                     };
                     continue;
@@ -346,32 +311,13 @@ public class HorsesController : ControllerBase
                     LastName = user.User.LastName,
                     PhoneNumber = user.User.PhoneNumber,
                     IsOwner = user.IsOwner,
-                    AccessRole = user.RuleAccess
+                    AccessRole = user.AccessRole
                 });
             }
         }
 
         var saves = await _saveService.GetAsync(horse.HorseId, user!.Id, 0, 20);
         horseDto.Saves = saves;
-
-        //CollectionEntry<Horse, Save> savesCollection = db.Entry(horse)
-        //    .Collection(h => h.Saves);
-        //await savesCollection.LoadAsync();
-
-        //foreach (var save in savesCollection.CurrentValue!.Skip(0).Take(20))
-        //{
-        //    horseDto.Saves.Add(new()
-        //    {
-        //        SaveId = save.SaveId,
-        //        HorseId = horse.HorseId,
-        //        UserId = save.UserId,
-        //        Header = save.Header,
-        //        Description = save.Description,
-        //        Date = save.Date,
-        //        CreationDate = save.CreationDate,
-        //        LastUpdate = save.LastUpdate,
-        //    });
-        //}
 
         return horseDto;
     }

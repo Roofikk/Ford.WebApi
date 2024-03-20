@@ -4,6 +4,7 @@ using Ford.WebApi.Dtos.Request;
 using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using System.Collections.ObjectModel;
 
 namespace Ford.WebApi.Services
@@ -59,6 +60,73 @@ namespace Ford.WebApi.Services
             return saveDto;
         }
 
+        public ResponseResult<Horse> Create(Horse horse, ICollection<RequestCreateSaveDto> requestCreateSaves, long userId)
+        {
+            foreach (var save in requestCreateSaves)
+            {
+                var result = Create(horse, save, userId);
+
+                if (result.Success)
+                {
+                    horse = result.Result!;
+                }
+                else
+                {
+                    return result;
+                }
+            }
+
+            return new ResponseResult<Horse>
+            {
+                Success = true,
+                Result = horse,
+            };
+        }
+
+        public ResponseResult<Horse> Create(Horse horse, RequestCreateSaveDto requestSave, long userId)
+        {
+            var save = new Save()
+            {
+                Header = requestSave.Header,
+                Description = requestSave.Description,
+                Date = requestSave.Date,
+                CreationDate = DateTime.UtcNow,
+                LastUpdate = DateTime.UtcNow,
+                UserId = userId,
+            };
+
+            foreach (var bone in requestSave.Bones)
+            {
+                var saveBone = new SaveBone()
+                {
+                    BoneId = bone.BoneId,
+                };
+
+                if (bone.Position != null)
+                {
+                    saveBone.PositionX = bone.Position.X;
+                    saveBone.PositionY = bone.Position.Y;
+                    saveBone.PositionZ = bone.Position.Z;
+                }
+
+                if (bone.Rotation != null)
+                {
+                    saveBone.RotationX = bone.Rotation.X;
+                    saveBone.RotationY = bone.Rotation.Y;
+                    saveBone.RotationZ = bone.Rotation.Z;
+                }
+
+                save.SaveBones.Add(saveBone);
+            }
+
+            horse.Saves.Add(save);
+            return new ResponseResult<Horse>
+            {
+                Success = true,
+                Result = horse,
+            };
+        }
+
         public async Task<ResponseSaveDto?> CreateAsync(RequestCreateSaveDto requestSave, long userId)
         {
             UserHorse? owner = await _context.HorseUsers.SingleOrDefaultAsync(
@@ -69,7 +137,7 @@ namespace Ford.WebApi.Services
                 return null;
             }
 
-            UserAccessRole currentOwnerRole = Enum.Parse<UserAccessRole>(owner.RuleAccess);
+            UserAccessRole currentOwnerRole = Enum.Parse<UserAccessRole>(owner.AccessRole);
 
             if (currentOwnerRole < UserAccessRole.Write)
             {

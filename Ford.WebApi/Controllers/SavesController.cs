@@ -21,14 +21,12 @@ namespace Ford.WebApi.Controllers;
 public class SavesController : ControllerBase
 {
     private readonly FordContext db;
-    private readonly UserManager<User> userManager;
     private readonly ISaveRepository _saveService;
     private User? _user;
 
-    public SavesController(FordContext db, UserManager<User> userManager, ISaveRepository saveRepository)
+    public SavesController(FordContext db, ISaveRepository saveRepository)
     {
         this.db = db;
-        this.userManager = userManager;
         _saveService = saveRepository;
     }
 

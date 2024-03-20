@@ -6,5 +6,5 @@ public class RequestCreateSaveDto : IRequestSave
     public string Header { get; set; } = null!;
     public string? Description { get; set; }
     public DateTime Date { get; set; }
-    public ICollection<BoneDto> Bones { get; set; } = null!;
+    public ICollection<BoneDto> Bones { get; set; } = [];
 }

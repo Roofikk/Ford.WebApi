@@ -18,7 +18,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddFordContext();
-builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 builder.Services.AddAuthentication(options =>
 {
@@ -103,6 +102,7 @@ builder.Services.AddScoped<UserFilter>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ISaveRepository, SaveRepository>();
+builder.Services.AddScoped<IUserHorseRepository, UserHorseService>();
 
 builder.Services.AddOptions<JwtSettings>()
     .Bind(builder.Configuration.GetSection("Jwt"))

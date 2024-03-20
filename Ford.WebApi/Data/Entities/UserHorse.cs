@@ -11,7 +11,7 @@ public class UserHorse
     public long UserId { get; set; }
     // переименовать в AccessRole
     [Column(TypeName = "nvarchar(8)")]
-    public string RuleAccess { get; set; } = null!;
+    public string AccessRole { get; set; } = null!;
     public bool IsOwner { get; set; } = false;
     public User User { get; set; } = null!;
     public Horse Horse { get; set; } = null!;
