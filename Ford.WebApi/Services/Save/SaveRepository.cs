@@ -30,14 +30,7 @@ namespace Ford.WebApi.Services
 
             foreach (var save in saves)
             {
-                ResponseSaveDto saveDto = new()
-                {
-                    HorseId = save.HorseId,
-                    SaveId = save.SaveId,
-                    Header = save.Header,
-                    Description = save.Description,
-                    Date = save.Date,
-                };
+                ResponseSaveDto saveDto = MapSave(save);
                 savesDto.Add(saveDto);
             }
 
@@ -213,16 +206,7 @@ namespace Ford.WebApi.Services
             save.LastUpdate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            var saveDto = new ResponseSaveDto()
-            {
-                SaveId = save.SaveId,
-                HorseId = save.HorseId,
-                Header = save.Header,
-                Description = save.Description,
-                Date = save.Date,
-                CreationDate = save.CreationDate,
-                LastUpdate = save.LastUpdate,
-            };
+            var saveDto = MapSave(save);
             return saveDto;
         }
 
@@ -242,7 +226,8 @@ namespace Ford.WebApi.Services
                 Header = save.Header,
                 Description = save.Description,
                 Date = save.Date,
-                Bones = new Collection<BoneDto>()
+                LastUpdate = save.LastUpdate,
+                CreationDate = save.CreationDate,
             };
 
             foreach (var bone in save.SaveBones)
