@@ -3,6 +3,7 @@ using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.Horse;
 using Ford.WebApi.Dtos.Request;
 using Ford.WebApi.Dtos.Response;
+using Ford.WebApi.Filters;
 using Ford.WebApi.Models.Horse;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -197,7 +198,7 @@ namespace Ford.WebApi.Controllers
 
             return Created(Request.GetDisplayUrl(), new HorseUserDto()
             {
-                Id = requestOwner.UserId,
+                UserId = requestOwner.UserId,
                 FirstName = newOwner.FirstName,
                 LastName = newOwner.LastName,
                 PhoneNumber = newOwner.PhoneNumber,
@@ -285,7 +286,7 @@ namespace Ford.WebApi.Controllers
 
             return Ok(new HorseUserDto()
             {
-                Id = owner.UserId,
+                UserId = owner.UserId,
                 FirstName = owner.User.FirstName,
                 LastName = owner.User.LastName,
                 PhoneNumber = owner.User.PhoneNumber,

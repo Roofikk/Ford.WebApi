@@ -4,27 +4,30 @@ using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.ObjectModel;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Dtos.Horse;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Net;
 using Microsoft.AspNetCore.Identity;
+using Ford.WebApi.Filters;
+using Ford.WebApi.Services;
 
 namespace Ford.WebApi.Controllers;
 
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
+[TypeFilter(typeof(UserFilter))]
 public class HorsesController : ControllerBase
 {
     private readonly FordContext db;
-    private readonly UserManager<User> userManager;
+    private ISaveRepository _saveService;
+    private User? user = null;
 
-    public HorsesController(FordContext db, UserManager<User> userManager)
+    public HorsesController(FordContext db, ISaveRepository saveRepository)
     {
         this.db = db;
-        this.userManager = userManager;
+        _saveService = saveRepository;
     }
 
     [HttpGet()]
@@ -34,16 +37,7 @@ public class HorsesController : ControllerBase
     public async Task<ActionResult> GetAsync(long? horseId, int below = 0, int amount = 20, 
         string orderByDate = "desc", string orderByName = "false")
     {
-        var user = await userManager.GetUserAsync(User);
-
-        if (user == null)
-        {
-            return Unauthorized(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Unauthorized",
-                HttpStatusCode.Unauthorized,
-                [new("Unauthorized", "User unauthorized")]));
-        }
+        user ??= (User?)HttpContext.Items["user"];
 
         if (horseId == null)
         {
@@ -116,16 +110,7 @@ public class HorsesController : ControllerBase
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<HorseRetrievingDto>> CreateAsync([FromBody] HorseForCreationDto requestHorse)
     {
-        var user = await userManager.GetUserAsync(User);
-
-        if (user == null)
-        {
-            return Unauthorized(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Unauthorized",
-                HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
-        }
+        user ??= (User)HttpContext.Items["user"]!;
 
         Horse horse = new()
         {
@@ -229,8 +214,8 @@ public class HorsesController : ControllerBase
                 Header = save.Header,
                 Description = save.Description,
                 Date = save.Date,
-                CreationDate = save.CreationDate ?? DateTime.UtcNow,
-                LastUpdate = save.LastUpdate ?? DateTime.UtcNow,
+                CreationDate = DateTime.UtcNow,
+                LastUpdate = DateTime.UtcNow,
                 User = user,
             });
         }
@@ -247,16 +232,7 @@ public class HorsesController : ControllerBase
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<HorseRetrievingDto>> UpdateAsync([FromBody] HorseForUpdateDto horse)
     {
-        var user = await userManager.GetUserAsync(User);
-
-        if (user == null)
-        {
-            return Unauthorized(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Unauthorized",
-                HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
-        }
+        user ??= (User)HttpContext.Items["user"]!;
 
         Horse? entity = await db.Horses.Include(h => h.Users)
             .FirstOrDefaultAsync(h => h.HorseId == horse.HorseId);
@@ -305,16 +281,7 @@ public class HorsesController : ControllerBase
     [HttpDelete]
     public async Task<IActionResult> DeleteAsync(long horseId)
     {
-        var user = await userManager.GetUserAsync(User);
-
-        if (user == null)
-        {
-            return Unauthorized(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Unauthorized",
-                HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("Unauthorized", "User unauthorized") }));
-        }
+        user ??= (User)HttpContext.Items["user"]!;
 
         UserHorse? owner = db.HorseOwners.SingleOrDefault(o => o.UserId == user.Id && o.HorseId == horseId);
 
@@ -385,7 +352,7 @@ public class HorsesController : ControllerBase
 
                 horseDto.Users.Add(new()
                 {
-                    Id = owner.UserId,
+                    UserId = owner.UserId,
                     FirstName = owner.User!.FirstName,
                     LastName = owner.User.LastName,
                     PhoneNumber = owner.User.PhoneNumber,
@@ -402,9 +369,23 @@ public class HorsesController : ControllerBase
             {
                 await db.Entry(user).Reference(o => o.User).LoadAsync();
 
+                if (this.user!.Id == user.UserId)
+                {
+                    horseDto.Self = new()
+                    {
+                        UserId = user.UserId,
+                        FirstName = user.User.FirstName,
+                        LastName = user.User.LastName,
+                        PhoneNumber = user.User.PhoneNumber,
+                        AccessRole = user.RuleAccess,
+                        IsOwner = user.IsOwner,
+                    };
+                    continue;
+                }
+
                 horseDto.Users.Add(new()
                 {
-                    Id = user.UserId,
+                    UserId = user.UserId,
                     FirstName = user.User.FirstName,
                     LastName = user.User.LastName,
                     PhoneNumber = user.User.PhoneNumber,
@@ -414,24 +395,27 @@ public class HorsesController : ControllerBase
             }
         }
 
-        CollectionEntry<Horse, Save> savesCollection = db.Entry(horse)
-            .Collection(h => h.Saves);
-        await savesCollection.LoadAsync();
+        var saves = await _saveService.GetAsync(horse.HorseId, user!.Id, 0, 20);
+        horseDto.Saves = saves;
 
-        foreach (var save in savesCollection.CurrentValue!)
-        {
-            horseDto.Saves.Add(new()
-            {
-                SaveId = save.SaveId,
-                HorseId = horse.HorseId,
-                UserId = save.UserId,
-                Header = save.Header,
-                Description = save.Description,
-                Date = save.Date,
-                CreationDate = save.CreationDate,
-                LastUpdate = save.LastUpdate,
-            });
-        }
+        //CollectionEntry<Horse, Save> savesCollection = db.Entry(horse)
+        //    .Collection(h => h.Saves);
+        //await savesCollection.LoadAsync();
+
+        //foreach (var save in savesCollection.CurrentValue!.Skip(0).Take(20))
+        //{
+        //    horseDto.Saves.Add(new()
+        //    {
+        //        SaveId = save.SaveId,
+        //        HorseId = horse.HorseId,
+        //        UserId = save.UserId,
+        //        Header = save.Header,
+        //        Description = save.Description,
+        //        Date = save.Date,
+        //        CreationDate = save.CreationDate,
+        //        LastUpdate = save.LastUpdate,
+        //    });
+        //}
 
         return horseDto;
     }

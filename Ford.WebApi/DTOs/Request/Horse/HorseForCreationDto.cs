@@ -14,6 +14,6 @@ public class HorseForCreationDto
     public string? Country { get; set; }
     public string? OwnerName { get; set; }
     public string? OwnerPhoneNumber { get; set; }
-    public ICollection<RequestUpdateSaveDto> Saves { get; set; } = [];
+    public ICollection<RequestCreateSaveDto> Saves { get; set; } = [];
     public ICollection<RequestHorseOwner> Users { get; set; } = [];
 }

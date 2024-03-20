@@ -47,6 +47,7 @@ public class SavesController : ControllerBase
         {
             IEnumerable<Save> saves = db.Saves.Where(s => s.HorseId == horseId &&
                 s.Horse.Users.Any(o => o.UserId == user.Id))
+                .OrderBy(o => o.LastUpdate)
                 .Skip(below)
                 .Take(amount)
                 .AsEnumerable();
@@ -94,11 +95,6 @@ public class SavesController : ControllerBase
         if (user is null)
         {
             return Unauthorized();
-        }
-
-        if (!requestSave.Bones.Any())
-        {
-            return BadRequest("Save object can not have empty list bones");
         }
 
         UserHorse? owner = await db.HorseOwners.SingleOrDefaultAsync(

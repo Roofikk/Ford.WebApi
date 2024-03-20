@@ -16,13 +16,14 @@ public class HorseRetrievingDto
     public DateTime LastUpdate { get; set; }
     public string? OwnerName { get; set; }
     public string? OwnerPhoneNumber { get; set; }
+    public HorseUserDto Self { get; set; } = null!;
     public ICollection<HorseUserDto> Users { get; set; } = [];
     public ICollection<ResponseSaveDto> Saves { get; set; } = [];
 }
 
 public class HorseUserDto
 {
-    public long Id { get; set; }
+    public long UserId { get; set; }
     public string FirstName { get; set; } = null!;
     public string? LastName { get; set; }
     public string? PhoneNumber { get; set; }
