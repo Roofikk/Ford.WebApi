@@ -5,7 +5,6 @@ using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
-using System.Data.Entity;
 
 namespace Ford.WebApi.Services
 {
@@ -20,13 +19,13 @@ namespace Ford.WebApi.Services
 
         public async Task<ICollection<ResponseSaveDto>> GetAsync(long horseId, long userId, int below = 0, int amount = 20)
         {
-            List<ResponseSaveDto> savesDto = new();
-            var saves = await _context.Saves.Where(s => s.HorseId == horseId &&
-                s.Horse.Users.Any(o => o.UserId == userId))
+            List<ResponseSaveDto> savesDto = [];
+            var saves = _context.Saves.Where(s => s.HorseId == horseId && s.Horse.Users.Any(o => o.UserId == userId))
                 .OrderBy(o => o.LastUpdate)
                 .Skip(below)
-                .Take(amount)
-                .ToListAsync();
+                .Take(amount);
+
+            var savesList = await saves.ToListAsync();
 
             foreach (var save in saves)
             {
@@ -62,7 +61,7 @@ namespace Ford.WebApi.Services
 
         public async Task<ResponseSaveDto?> CreateAsync(RequestCreateSaveDto requestSave, long userId)
         {
-            UserHorse? owner = await _context.HorseOwners.SingleOrDefaultAsync(
+            UserHorse? owner = await _context.HorseUsers.SingleOrDefaultAsync(
             o => o.UserId == userId && o.HorseId == requestSave.HorseId);
 
             if (owner is null)
@@ -70,9 +69,9 @@ namespace Ford.WebApi.Services
                 return null;
             }
 
-            OwnerAccessRole currentOwnerRole = Enum.Parse<OwnerAccessRole>(owner.RuleAccess);
+            UserAccessRole currentOwnerRole = Enum.Parse<UserAccessRole>(owner.RuleAccess);
 
-            if (currentOwnerRole < OwnerAccessRole.Write)
+            if (currentOwnerRole < UserAccessRole.Write)
             {
                 return null;
             }
@@ -143,7 +142,7 @@ namespace Ford.WebApi.Services
             save.Header = requestSave.Header;
             save.Description = requestSave.Description;
             save.Date = requestSave.Date;
-            save.LastUpdate = requestSave.LastUpdate ?? DateTime.UtcNow;
+            save.LastUpdate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             var saveDto = new ResponseSaveDto()

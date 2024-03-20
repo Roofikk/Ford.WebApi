@@ -98,7 +98,7 @@ public class HorseProfiles : Profile
                 dest => dest.Users,
                 opt => opt.MapFrom(src => new Collection<UserHorse>()));
 
-        CreateMap<HorseForUpdateDto, Horse>()
+        CreateMap<RequestUpdateHorseDto, Horse>()
             .ForMember(
                 dest => dest.HorseId,
                 opt => opt.MapFrom(src => src.HorseId))

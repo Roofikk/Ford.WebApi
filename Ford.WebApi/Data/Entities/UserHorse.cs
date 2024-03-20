@@ -17,7 +17,7 @@ public class UserHorse
     public Horse Horse { get; set; } = null!;
 }
 
-public enum OwnerAccessRole
+public enum UserAccessRole
 {
     // Only read saves and horse info
     Read = 0,

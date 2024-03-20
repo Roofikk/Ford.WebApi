@@ -21,7 +21,7 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
     public virtual DbSet<Horse> Horses { get; set; } = null!;
     public virtual DbSet<Save> Saves { get; set; } = null!;
     public virtual DbSet<SaveBone> SaveBones { get; set; } = null!;
-    public virtual DbSet<UserHorse> HorseOwners { get; set; } = null!;
+    public virtual DbSet<UserHorse> HorseUsers { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

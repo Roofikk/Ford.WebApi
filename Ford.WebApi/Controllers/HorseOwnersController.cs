@@ -47,7 +47,7 @@ namespace Ford.WebApi.Controllers
             }
 
             //Search existing horse owner
-            UserHorse? currentOwner = await db.HorseOwners.FirstOrDefaultAsync(
+            UserHorse? currentOwner = await db.HorseUsers.FirstOrDefaultAsync(
                 hw => hw.User == user && hw.HorseId == requestHorseOwners.HorseId);
 
             if (currentOwner is null)
@@ -55,10 +55,10 @@ namespace Ford.WebApi.Controllers
                 return BadRequest("You do not have access to this object");
             }
 
-            OwnerAccessRole currentOwnerRole = Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true);
+            UserAccessRole currentOwnerRole = Enum.Parse<UserAccessRole>(currentOwner.RuleAccess, true);
 
             //Check access to update
-            if (currentOwnerRole < OwnerAccessRole.All)
+            if (currentOwnerRole < UserAccessRole.All)
             {
                 return BadRequest("Access denied");
             }
@@ -70,7 +70,7 @@ namespace Ford.WebApi.Controllers
                 if (reqOwner.UserId == user.Id)
                     continue;
 
-                if (!Enum.TryParse(reqOwner.RuleAccess, true, out OwnerAccessRole role))
+                if (!Enum.TryParse(reqOwner.RuleAccess, true, out UserAccessRole role))
                 {
                     return BadRequest(new BadResponse(
                         Request.GetDisplayUrl(),
@@ -79,7 +79,7 @@ namespace Ford.WebApi.Controllers
                         new Collection<Error> { new("Invalid Role", $"Role {reqOwner.RuleAccess} invalid") }));
                 }
 
-                if (role >= Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true))
+                if (role >= Enum.Parse<UserAccessRole>(currentOwner.RuleAccess, true))
                 {
                     return BadRequest(new BadResponse(
                         Request.GetDisplayUrl(),
@@ -98,7 +98,7 @@ namespace Ford.WebApi.Controllers
 
             newOwners.Add(currentOwner);
 
-            await db.HorseOwners.AddRangeAsync(newOwners);
+            await db.HorseUsers.AddRangeAsync(newOwners);
             await db.SaveChangesAsync();
 
             return RedirectToAction("GetAsync", "HorsesController", requestHorseOwners.HorseId);
@@ -122,9 +122,9 @@ namespace Ford.WebApi.Controllers
                     new Collection<Error> { new("Unauthorized", "User unauthorized") }));
             }
 
-            requestOwner.OwnerAccessRole ??= OwnerAccessRole.Read.ToString();
+            requestOwner.OwnerAccessRole ??= UserAccessRole.Read.ToString();
 
-            if (!Enum.TryParse(requestOwner.OwnerAccessRole, true, out OwnerAccessRole role))
+            if (!Enum.TryParse(requestOwner.OwnerAccessRole, true, out UserAccessRole role))
             {
                 return BadRequest(new BadResponse(
                    Request.GetDisplayUrl(),
@@ -133,7 +133,7 @@ namespace Ford.WebApi.Controllers
                    new Collection<Error> { new("Rule Access", $"Impossible argument {requestOwner.OwnerAccessRole}") }));
             }
 
-            UserHorse? currentOwner = await db.HorseOwners.SingleOrDefaultAsync(
+            UserHorse? currentOwner = await db.HorseUsers.SingleOrDefaultAsync(
                 o => o.User == user && o.HorseId == requestOwner.HorseId);
 
             if (currentOwner is null)
@@ -145,7 +145,7 @@ namespace Ford.WebApi.Controllers
                     new Collection<Error> { new("Not found", "Horse not exists or permission denied for it") }));
             }
 
-            if (Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true) < OwnerAccessRole.All)
+            if (Enum.Parse<UserAccessRole>(currentOwner.RuleAccess, true) < UserAccessRole.All)
             {
                 return BadRequest(new BadResponse(
                     Request.GetDisplayUrl(),
@@ -178,7 +178,7 @@ namespace Ford.WebApi.Controllers
                    new Collection<Error> { new("Owner exists", $"Adding owner is already exists") }));
             }
 
-            if (role >= Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true))
+            if (role >= Enum.Parse<UserAccessRole>(currentOwner.RuleAccess, true))
             {
                 return BadRequest(new BadResponse(
                    Request.GetDisplayUrl(),
@@ -187,7 +187,7 @@ namespace Ford.WebApi.Controllers
                    new Collection<Error> { new("Access Role", $"Owner role cannot be equal or above than yours") }));
             }
 
-            db.HorseOwners.Add(new UserHorse()
+            db.HorseUsers.Add(new UserHorse()
             {
                 HorseId = requestOwner.HorseId,
                 UserId = requestOwner.UserId,
@@ -225,9 +225,9 @@ namespace Ford.WebApi.Controllers
                     new Collection<Error> { new("Unauthorized", "User unauthorized") }));
             }
 
-            requestOwner.OwnerAccessRole ??= OwnerAccessRole.Read.ToString();
+            requestOwner.OwnerAccessRole ??= UserAccessRole.Read.ToString();
 
-            if (!Enum.TryParse(requestOwner.OwnerAccessRole, true, out OwnerAccessRole role))
+            if (!Enum.TryParse(requestOwner.OwnerAccessRole, true, out UserAccessRole role))
             {
                 return BadRequest(new BadResponse(
                    Request.GetDisplayUrl(),
@@ -245,7 +245,7 @@ namespace Ford.WebApi.Controllers
                    new Collection<Error> { new("Change yourself", $"You can't change yourself") }));
             }
 
-            UserHorse? currentOwner = await db.HorseOwners.SingleOrDefaultAsync(
+            UserHorse? currentOwner = await db.HorseUsers.SingleOrDefaultAsync(
                 o => o.User == user && o.HorseId == requestOwner.HorseId);
 
             if (currentOwner is null)
@@ -257,7 +257,7 @@ namespace Ford.WebApi.Controllers
                     new Collection<Error> { new("Not found", "Horse not exists or permission denied for it") }));
             }
 
-            if (Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true) < OwnerAccessRole.All)
+            if (Enum.Parse<UserAccessRole>(currentOwner.RuleAccess, true) < UserAccessRole.All)
             {
                 return BadRequest(new BadResponse(
                     Request.GetDisplayUrl(),
@@ -266,7 +266,7 @@ namespace Ford.WebApi.Controllers
                     new Collection<Error> { new("Permission denied", "Permission denied for the object") }));
             }
 
-            UserHorse? owner = await db.HorseOwners.SingleOrDefaultAsync(
+            UserHorse? owner = await db.HorseUsers.SingleOrDefaultAsync(
                 o => o.UserId == requestOwner.UserId && o.HorseId == requestOwner.HorseId);
 
             if (owner is null)
@@ -321,7 +321,7 @@ namespace Ford.WebApi.Controllers
                    new Collection<Error> { new("Delete yourself", $"You can't delete yourself") }));
             }
 
-            UserHorse? currentOwner = await db.HorseOwners.SingleOrDefaultAsync(
+            UserHorse? currentOwner = await db.HorseUsers.SingleOrDefaultAsync(
                 o => o.User == user && o.HorseId == horseId);
 
             if (currentOwner is null)
@@ -333,7 +333,7 @@ namespace Ford.WebApi.Controllers
                     new Collection<Error> { new("Not found", "Horse not exists or permission denied for it") }));
             }
 
-            if (Enum.Parse<OwnerAccessRole>(currentOwner.RuleAccess, true) < OwnerAccessRole.All)
+            if (Enum.Parse<UserAccessRole>(currentOwner.RuleAccess, true) < UserAccessRole.All)
             {
                 return BadRequest(new BadResponse(
                     Request.GetDisplayUrl(),
@@ -342,7 +342,7 @@ namespace Ford.WebApi.Controllers
                     new Collection<Error> { new("Permission denied", "Permission denied for the object") }));
             }
 
-            UserHorse? owner = await db.HorseOwners.SingleOrDefaultAsync(
+            UserHorse? owner = await db.HorseUsers.SingleOrDefaultAsync(
                 o => o.UserId == userId && o.HorseId == horseId);
 
             if (owner is null)

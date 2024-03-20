@@ -9,21 +9,27 @@ using System.Collections.ObjectModel;
 using Ford.WebApi.Dtos.Request;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
+using Ford.WebApi.Services;
+using Ford.WebApi.Filters;
 
 namespace Ford.WebApi.Controllers;
 
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
+[ServiceFilter(typeof(UserFilter))]
 public class SavesController : ControllerBase
 {
     private readonly FordContext db;
     private readonly UserManager<User> userManager;
+    private readonly ISaveRepository _saveService;
+    private User? _user;
 
-    public SavesController(FordContext db, UserManager<User> userManager)
+    public SavesController(FordContext db, UserManager<User> userManager, ISaveRepository saveRepository)
     {
         this.db = db;
         this.userManager = userManager;
+        _saveService = saveRepository;
     }
 
     // GET: api/<SavesController>/{horseId}
@@ -34,143 +40,44 @@ public class SavesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Get([Required] long horseId, long? saveId, int below = 0, int amount = 20)
     {
-        User? user = await userManager.GetUserAsync(User);
-
-        if (user is null)
-        {
-            return Unauthorized();
-        }
-
-        List<ResponseSaveDto> savesDto = new();
+        _user ??= (User)HttpContext.Items["user"]!;
 
         if (saveId == null)
         {
-            IEnumerable<Save> saves = db.Saves.Where(s => s.HorseId == horseId &&
-                s.Horse.Users.Any(o => o.UserId == user.Id))
-                .OrderBy(o => o.LastUpdate)
-                .Skip(below)
-                .Take(amount)
-                .AsEnumerable();
-
-            foreach (var save in saves)
-            {
-                ResponseSaveDto saveDto = new()
-                {
-                    HorseId = save.HorseId,
-                    SaveId = save.SaveId,
-                    Header = save.Header,
-                    Description = save.Description,
-                    Date = save.Date,
-                };
-                savesDto.Add(saveDto);
-            }
-
-            return Ok(savesDto);
-        } 
+            var saves = await _saveService.GetAsync(horseId, _user.Id, below, amount);
+            return Ok(saves);
+        }
         else
         {
-            var save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
-
-            if (save == null)
-            {
-                return NotFound();
-            }
-
-            var collection = db.Entry(save).Collection(s => s.SaveBones);
-            await collection.LoadAsync();
-
-            ResponseFullSave saveDto = MapSave(save);
-            return Ok(saveDto);
+            var save = await _saveService.GetAsync(horseId, saveId.Value, _user.Id);
+            return Ok(save);
         }
     }
 
     // POST api/<SavesController>/{horseId}
     // Create
     [HttpPost()]
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
     public async Task<ActionResult<ResponseSaveDto>> Create([FromBody] RequestCreateSaveDto requestSave)
     {
         // get authorize user
-        User? user = await userManager.GetUserAsync(User);
+        _user ??= (User)HttpContext.Items["user"]!;
+        var saveDto = await _saveService.CreateAsync(requestSave, _user.Id);
 
-        if (user is null)
+        if (saveDto == null)
         {
-            return Unauthorized();
+            return BadRequest();
         }
 
-        UserHorse? owner = await db.HorseOwners.SingleOrDefaultAsync(
-            o => o.UserId == user.Id && o.HorseId == requestSave.HorseId);
-
-        if (owner is null)
-        {
-            return NotFound();
-        }
-
-        OwnerAccessRole currentOwnerRole = Enum.Parse<OwnerAccessRole>(owner.RuleAccess);
-
-        if (currentOwnerRole < OwnerAccessRole.Write)
-        {
-            return BadRequest("No access to this action with the specified parameters");
-        }
-
-        var reference = db.Entry(owner).Reference(o => o.Horse);
-        await reference.LoadAsync();
-        Horse? horse = reference.CurrentValue;
-
-        if (horse is null)
-        {
-            return NotFound("Horse not found");
-        }
-
-        Save save = new()
-        {
-            Header = requestSave.Header,
-            Description = requestSave.Description,
-            Date = requestSave.Date,
-            User = user,
-            Horse = horse,
-            CreationDate = DateTime.UtcNow,
-            LastUpdate = DateTime.UtcNow,
-        };
-
-        ICollection<SaveBone> saveBones = new Collection<SaveBone>();
-
-        foreach (var bone in requestSave.Bones)
-        {
-            saveBones.Add(new SaveBone
-            {
-                BoneId = bone.BoneId,
-                Save = save,
-
-                PositionX = bone.Position?.X,
-                PositionY = bone.Position?.Y,
-                PositionZ = bone.Position?.Z,
-
-                RotationX = bone.Rotation?.X,
-                RotationY = bone.Rotation?.Y,
-                RotationZ = bone.Rotation?.Z,
-            });
-        }
-
-        horse.LastUpdate = DateTime.UtcNow;
-
-        await db.SaveBones.AddRangeAsync(saveBones);
-        await db.AddAsync(save);
-        await db.SaveChangesAsync();
-        return Created($"api/[controller]?horseId={requestSave.HorseId}&saveId={save.SaveId}", MapSave(save));
+        return Created($"api/[controller]?horseId={requestSave.HorseId}&saveId={saveDto.SaveId}", saveDto);
     }
 
     // PUT api/<SavesController>/5
     // Update
     [HttpPut()]
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
     public async Task<ActionResult<ResponseSaveDto>> Update([FromBody] RequestUpdateSaveDto requestSave)
     {
-        User? user = await userManager.GetUserAsync(User);
-
-        if (user is null)
-        {
-            return Unauthorized();
-        }
-
         Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == requestSave.SaveId);
 
         if (save is null)
@@ -178,66 +85,21 @@ public class SavesController : ControllerBase
             return NotFound();
         }
 
-        // get horse by save
-        var horseReference = db.Entry(save).Reference(s => s.Horse);
-        await horseReference.LoadAsync();
+        var saveDto = await _saveService.UpdateAsync(requestSave, save);
 
-        if (!horseReference.IsLoaded)
+        if (saveDto == null)
         {
             return BadRequest();
         }
 
-        // get owners by horse
-        var collection = db.Entry(horseReference.CurrentValue!).Collection(h => h.Users);
-        await collection.LoadAsync();
-
-        if (!collection.IsLoaded)
-        {
-            return BadRequest();
-        }
-
-        UserHorse? owner = collection.CurrentValue!.SingleOrDefault(o => o.UserId == user.Id);
-
-        if (owner is null)
-        {
-            return BadRequest("You don't have access to the horse");
-        }
-
-        if (Enum.Parse<OwnerAccessRole>(owner.RuleAccess) < OwnerAccessRole.Write)
-        {
-            return BadRequest("You don't have access to the horse");
-        }
-
-        save.Header = requestSave.Header;
-        save.Description = requestSave.Description;
-        save.Date = requestSave.Date;
-        save.LastUpdate = requestSave.LastUpdate ?? DateTime.UtcNow;
-
-        await db.SaveChangesAsync();
-        var saveDto = new ResponseSaveDto()
-        {
-            SaveId = save.SaveId,
-            HorseId = save.HorseId,
-            Header = save.Header,
-            Description = save.Description,
-            Date = save.Date,
-            CreationDate = save.CreationDate,
-            LastUpdate = save.LastUpdate,
-        };
         return saveDto;
     }
 
     // DELETE api/[controller]?saveId=5
     [HttpDelete()]
-    public async Task<IActionResult> Delete([Required] int saveId)
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
+    public async Task<IActionResult> Delete([Required] long saveId)
     {
-        User? user = await userManager.GetUserAsync(User);
-
-        if (user is null)
-        {
-            return Unauthorized();
-        }
-
         Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
 
         if (save is null)
@@ -245,73 +107,14 @@ public class SavesController : ControllerBase
             return NotFound();
         }
 
-        // check access
-        var saveReference = db.Entry(save).Reference(s => s.Horse);
-        await saveReference.LoadAsync();
-
-        if (!saveReference.IsLoaded)
+        var result = await _saveService.DeleteAsync(save);
+        if (result)
+        {
+            return Ok();
+        }
+        else
         {
             return BadRequest();
         }
-
-        var collection = db.Entry(saveReference.CurrentValue!).Collection(h => h.Users);
-        await collection.LoadAsync();
-
-        if (!collection.IsLoaded)
-        {
-            return BadRequest();
-        }
-
-        UserHorse? owner = collection.CurrentValue!.SingleOrDefault(o => o.UserId == user.Id);
-
-        if (owner is null)
-        {
-            return BadRequest("Owner not found");
-        }
-
-        if (Enum.Parse<OwnerAccessRole>(owner.RuleAccess, true) < OwnerAccessRole.Write)
-        {
-            return BadRequest("You don't have access to the action");
-        }
-
-        db.Remove(save);
-        await db.SaveChangesAsync();
-        return Ok();
-    }
-
-    private ResponseFullSave MapSave(Save save)
-    {
-        ResponseFullSave responseSaveDto = new ResponseFullSave()
-        {
-            HorseId = save.HorseId,
-            SaveId = save.SaveId,
-            Header = save.Header,
-            Description = save.Description,
-            Date = save.Date,
-            Bones = new Collection<BoneDto>()
-        };
-
-        foreach (var bone in save.SaveBones)
-        {
-            responseSaveDto.Bones.Add(new BoneDto()
-            {
-                BoneId = bone.BoneId,
-
-                Position = new Vector()
-                {
-                    X = bone.PositionX!.Value,
-                    Y = bone.PositionY!.Value,
-                    Z = bone.PositionZ!.Value
-                },
-                Rotation = new Vector()
-                {
-                    X = bone.RotationX!.Value,
-                    Y = bone.RotationY!.Value,
-                    Z = bone.RotationZ!.Value
-                }
-            });
-        }
-
-        return responseSaveDto;
     }
 }

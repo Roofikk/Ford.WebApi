@@ -7,7 +7,7 @@ namespace Ford.WebApi.Filters
 {
     public class UserFilter : Attribute, IAsyncActionFilter
     {
-        private UserManager<User> _userManager;
+        private readonly UserManager<User> _userManager;
 
         public UserFilter(UserManager<User> userManager)
         {

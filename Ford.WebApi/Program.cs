@@ -10,6 +10,8 @@ using Ford.WebApi.Data;
 using Ford.WebApi.Extensions;
 using Ford.WebApi.Services.Identity;
 using Ford.WebApi.Extensions.Authentication;
+using Ford.WebApi.Services;
+using Ford.WebApi.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -97,8 +99,10 @@ builder.Services.AddSwaggerGen(opts =>
     });
 });
 
+builder.Services.AddScoped<UserFilter>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<ISaveRepository, SaveRepository>();
 
 builder.Services.AddOptions<JwtSettings>()
     .Bind(builder.Configuration.GetSection("Jwt"))

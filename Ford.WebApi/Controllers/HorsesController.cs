@@ -8,7 +8,6 @@ using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Dtos.Horse;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Net;
-using Microsoft.AspNetCore.Identity;
 using Ford.WebApi.Filters;
 using Ford.WebApi.Services;
 
@@ -17,7 +16,7 @@ namespace Ford.WebApi.Controllers;
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-[TypeFilter(typeof(UserFilter))]
+[ServiceFilter(typeof(UserFilter))]
 public class HorsesController : ControllerBase
 {
     private readonly FordContext db;
@@ -34,10 +33,10 @@ public class HorsesController : ControllerBase
     [ProducesResponseType(typeof(RetrieveArray<HorseRetrievingDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult> GetAsync(long? horseId, int below = 0, int amount = 20, 
+    public async Task<ActionResult> GetAsync(long? horseId, int below = 0, int amount = 20,
         string orderByDate = "desc", string orderByName = "false")
     {
-        user ??= (User?)HttpContext.Items["user"];
+        user ??= (User)HttpContext.Items["user"]!;
 
         if (horseId == null)
         {
@@ -89,7 +88,7 @@ public class HorsesController : ControllerBase
         {
             var horse = await db.Horses
                 .SingleOrDefaultAsync(h => h.HorseId == horseId);
-            
+
             if (horse is null)
             {
                 return NotFound(new BadResponse(
@@ -127,7 +126,7 @@ public class HorsesController : ControllerBase
 
         //Check the possibility of granting role to an object
         var check = requestHorse.Users
-            .Where(u => u.UserId != user.Id && Enum.Parse<OwnerAccessRole>(u.RuleAccess) >= OwnerAccessRole.Creator);
+            .Where(u => u.UserId != user.Id && Enum.Parse<UserAccessRole>(u.RuleAccess) >= UserAccessRole.Creator);
 
         if (check.Any())
         {
@@ -154,14 +153,14 @@ public class HorsesController : ControllerBase
                     horse.Users.Add(new()
                     {
                         UserId = reqUser.UserId,
-                        RuleAccess = OwnerAccessRole.Creator.ToString(),
+                        RuleAccess = UserAccessRole.Creator.ToString(),
                         IsOwner = reqUser.IsOwner,
                     });
 
                     continue;
                 }
-                    
-                if (!Enum.TryParse(reqUser.RuleAccess, true, out OwnerAccessRole role))
+
+                if (!Enum.TryParse(reqUser.RuleAccess, true, out UserAccessRole role))
                 {
                     return BadRequest(new BadResponse(
                         Request.GetDisplayUrl(),
@@ -193,7 +192,7 @@ public class HorsesController : ControllerBase
             horse.Users.Add(new()
             {
                 UserId = user.Id,
-                RuleAccess = OwnerAccessRole.Creator.ToString(),
+                RuleAccess = UserAccessRole.Creator.ToString(),
                 IsOwner = false,
             });
         }
@@ -230,12 +229,11 @@ public class HorsesController : ControllerBase
     [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<HorseRetrievingDto>> UpdateAsync([FromBody] HorseForUpdateDto horse)
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
+    public async Task<ActionResult<HorseRetrievingDto>> UpdateAsync([FromBody] RequestUpdateHorseDto requestHorse)
     {
-        user ??= (User)HttpContext.Items["user"]!;
-
         Horse? entity = await db.Horses.Include(h => h.Users)
-            .FirstOrDefaultAsync(h => h.HorseId == horse.HorseId);
+            .FirstOrDefaultAsync(h => h.HorseId == requestHorse.HorseId);
 
         if (entity == null)
         {
@@ -243,35 +241,15 @@ public class HorsesController : ControllerBase
                 Request.GetDisplayUrl(),
                 "Bad Request",
                 HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Object non-existent", $"Horse (id: {horse.HorseId}) not found") }));
+                new Collection<Error> { new("Object non-existent", $"Horse (id: {requestHorse.HorseId}) not found") }));
         }
 
-        UserHorse? owner = entity.Users.SingleOrDefault(o => o.User == user && o.HorseId == horse.HorseId);
-
-        if (owner is null)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Bad Request",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Access denied", $"You do not have permissions for the current action") }));
-        }
-
-        if (Enum.Parse<OwnerAccessRole>(owner.RuleAccess, true) < OwnerAccessRole.Write)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Bad Request",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Access denied", $"You do not have permissions for the current action") }));
-        }
-
-        entity.Name = horse.Name;
-        entity.BirthDate = horse.BirthDate;
-        entity.Sex = horse.Sex;
-        entity.City = horse.City;
-        entity.Region = horse.Region;
-        entity.Country = horse.Country;
+        entity.Name = requestHorse.Name;
+        entity.BirthDate = requestHorse.BirthDate;
+        entity.Sex = requestHorse.Sex;
+        entity.City = requestHorse.City;
+        entity.Region = requestHorse.Region;
+        entity.Country = requestHorse.Country;
 
         await db.SaveChangesAsync();
 
@@ -279,42 +257,20 @@ public class HorsesController : ControllerBase
     }
 
     [HttpDelete]
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Read])]
     public async Task<IActionResult> DeleteAsync(long horseId)
     {
         user ??= (User)HttpContext.Items["user"]!;
+        var horseUser = (UserHorse)HttpContext.Items["horseUser"]!;
 
-        UserHorse? owner = db.HorseOwners.SingleOrDefault(o => o.UserId == user.Id && o.HorseId == horseId);
-
-        if (owner is null)
+        if (Enum.Parse<UserAccessRole>(horseUser.RuleAccess, true) == UserAccessRole.Creator)
         {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Bad Request",
-                HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Access denied", $"You do not have permissions for the current action") }));
-        }
-
-        if (Enum.Parse<OwnerAccessRole>(owner.RuleAccess, true) == OwnerAccessRole.Creator)
-        {
-            var referenceHorse = db.Entry(owner).Reference(o => o.Horse);
-            await referenceHorse.LoadAsync();
-
-            Horse? horse = referenceHorse.CurrentValue;
-
-            if (horse is null)
-            {
-                return BadRequest(new BadResponse(
-                    Request.GetDisplayUrl(),
-                    "Bad Request",
-                    HttpStatusCode.BadRequest,
-                    new Collection<Error> { new("Horse is null", $"Horse not found") }));
-            }
-
+            Horse horse = await db.Horses.SingleAsync(h => h.HorseId == horseId);
             db.Remove(horse);
         }
         else
         {
-            db.Remove(owner);
+            db.Remove(horseUser);
         }
 
         await db.SaveChangesAsync();
