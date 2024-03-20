@@ -4,7 +4,8 @@ using Ford.WebApi.Dtos.Horse;
 using Ford.WebApi.Dtos.Request;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using System.Data.Entity;
+using Microsoft.EntityFrameworkCore;
+
 
 namespace Ford.WebApi.Filters
 {
@@ -25,8 +26,10 @@ namespace Ford.WebApi.Filters
 
             UserHorse? horseUser = null;
             
-            if (context.ActionArguments["requestSave"] is IRequestSave requestSave)
+            if (context.ActionArguments.TryGetValue("requestSave", out var value))
             {
+                var requestSave = value as IRequestSave; 
+                
                 switch (requestSave)
                 {
                     case RequestCreateSaveDto requestCreateSaveDto:
@@ -40,15 +43,17 @@ namespace Ford.WebApi.Filters
                 }
             }
 
-            if (context.ActionArguments["saveId"] is long saveId)
+            if (context.ActionArguments.TryGetValue("saveId", out value))
             {
+                var saveId = Convert.ToInt64(value);
                 var save = await _context.Saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
                 horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == save.HorseId);
             }
 
-            if (context.ActionArguments["requestHorse"] is RequestUpdateHorseDto horse)
+            if (context.ActionArguments.TryGetValue("requestHorse", out value))
             {
-                horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == horse.HorseId);
+                var requestHorse = value as RequestUpdateHorseDto;
+                horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == requestHorse!.HorseId);
             }
 
             if (horseUser == null)

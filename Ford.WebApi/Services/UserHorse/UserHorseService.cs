@@ -4,8 +4,6 @@ using Ford.WebApi.Dtos.Horse;
 using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Models.Horse;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.ObjectModel;
-using System.Net;
 
 namespace Ford.WebApi.Services;
 
@@ -220,6 +218,21 @@ public class UserHorseService : IUserHorseRepository
                 ErrorMessage = "You don't have permission for update or add users",
             };
         }
+
+        // change self
+        var self = requestUsers.SingleOrDefault(u => u.UserId == currentUserId);
+
+        if (self == null)
+        {
+            return new ResponseResult<Horse>
+            {
+                Success = false,
+                ErrorMessage = "You not found as horse's user in request body",
+            };
+        }
+
+        horseUser.IsOwner = self.IsOwner;
+        _context.Entry(horseUser).State = EntityState.Modified;
 
         // select users for delete
         var usersForDeleting = horse.Users.Where(u => !requestUsers.Any(x => x.UserId == u.UserId));

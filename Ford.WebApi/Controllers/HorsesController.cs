@@ -19,14 +19,14 @@ namespace Ford.WebApi.Controllers;
 [ServiceFilter(typeof(UserFilter))]
 public class HorsesController : ControllerBase
 {
-    private readonly FordContext db;
+    private readonly FordContext _context;
     private readonly ISaveRepository _saveService;
     private readonly IUserHorseRepository _horseUserService;
-    private User? user = null;
+    private User? _user = null;
 
     public HorsesController(FordContext db, ISaveRepository saveRepository, IUserHorseRepository userHorseRepository)
     {
-        this.db = db;
+        this._context = db;
         _saveService = saveRepository;
         _horseUserService = userHorseRepository;
     }
@@ -38,11 +38,11 @@ public class HorsesController : ControllerBase
     public async Task<ActionResult> GetAsync(long? horseId, int below = 0, int amount = 20,
         string orderByDate = "desc", string orderByName = "false")
     {
-        user ??= (User)HttpContext.Items["user"]!;
+        _user ??= (User)HttpContext.Items["user"]!;
 
         if (horseId == null)
         {
-            var queryableHorses = db.Horses.Where(h => h.Users.Any(o => o.UserId == user.Id));
+            var queryableHorses = _context.Horses.Where(h => h.Users.Any(o => o.UserId == _user.Id));
 
             switch (orderByDate)
             {
@@ -88,7 +88,7 @@ public class HorsesController : ControllerBase
         }
         else
         {
-            var horse = await db.Horses
+            var horse = await _context.Horses
                 .SingleOrDefaultAsync(h => h.HorseId == horseId);
 
             if (horse is null)
@@ -111,7 +111,7 @@ public class HorsesController : ControllerBase
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<HorseRetrievingDto>> CreateAsync([FromBody] HorseForCreationDto requestHorse)
     {
-        user ??= (User)HttpContext.Items["user"]!;
+        _user ??= (User)HttpContext.Items["user"]!;
 
         Horse horse = new()
         {
@@ -128,7 +128,7 @@ public class HorsesController : ControllerBase
 
         //Check the possibility of granting role to an object
         var check = requestHorse.Users
-            .Where(u => u.UserId != user.Id && Enum.Parse<UserAccessRole>(u.AccessRole) >= UserAccessRole.Creator);
+            .Where(u => u.UserId != _user.Id && Enum.Parse<UserAccessRole>(u.AccessRole) >= UserAccessRole.Creator);
 
         if (check.Any())
         {
@@ -139,7 +139,7 @@ public class HorsesController : ControllerBase
                 new Collection<Error> { new("Invalid Role", "Some roles access can not be greater or equal than your") }));
         }
 
-        var result = _horseUserService.Create(user, horse, requestHorse.Users);
+        var result = _horseUserService.Create(_user, horse, requestHorse.Users);
 
         if (!result.Success)
         {
@@ -160,7 +160,7 @@ public class HorsesController : ControllerBase
             horse.OwnerPhoneNumber = requestHorse.OwnerPhoneNumber;
         }
 
-        var creaeteSaveResult = _saveService.Create(horse, requestHorse.Saves, user.Id);
+        var creaeteSaveResult = _saveService.Create(horse, requestHorse.Saves, _user.Id);
 
         if (!creaeteSaveResult.Success)
         {
@@ -173,8 +173,8 @@ public class HorsesController : ControllerBase
 
         horse = result.Result!;
 
-        var entry = db.Horses.Add(horse);
-        await db.SaveChangesAsync();
+        var entry = _context.Horses.Add(horse);
+        await _context.SaveChangesAsync();
 
         return Created($"api/[controller]/horseId={horse.HorseId}", await MapHorse(entry.Entity));
     }
@@ -186,7 +186,9 @@ public class HorsesController : ControllerBase
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
     public async Task<ActionResult<HorseRetrievingDto>> UpdateAsync([FromBody] RequestUpdateHorseDto requestHorse)
     {
-        Horse? entity = await db.Horses.Include(h => h.Users)
+        _user ??= (User)HttpContext.Items["user"]!;
+
+        Horse? entity = await _context.Horses.Include(h => h.Users)
             .FirstOrDefaultAsync(h => h.HorseId == requestHorse.HorseId);
 
         if (entity == null)
@@ -205,7 +207,7 @@ public class HorsesController : ControllerBase
         entity.Region = requestHorse.Region;
         entity.Country = requestHorse.Country;
 
-        var result = await _horseUserService.UpdateAsync(user!.Id, entity, requestHorse.Users);
+        var result = await _horseUserService.UpdateAsync(_user.Id, entity, requestHorse.Users);
 
         if (!result.Success)
         {
@@ -217,9 +219,20 @@ public class HorsesController : ControllerBase
         }
 
         entity = result.Result!;
-        db.Entry(entity).State = EntityState.Modified;
+        _context.Entry(entity).State = EntityState.Modified;
 
-        await db.SaveChangesAsync();
+        if (entity.Users.SingleOrDefault(u => u.IsOwner) == null)
+        {
+            entity.OwnerName = requestHorse.OwnerName;
+            entity.OwnerPhoneNumber = requestHorse.OwnerPhoneNumber;
+        }
+        else
+        {
+            entity.OwnerName = null;
+            entity.OwnerPhoneNumber = null;
+        }
+
+        await _context.SaveChangesAsync();
         return await MapHorse(entity);
     }
 
@@ -227,20 +240,20 @@ public class HorsesController : ControllerBase
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Read])]
     public async Task<IActionResult> DeleteAsync(long horseId)
     {
-        user ??= (User)HttpContext.Items["user"]!;
+        _user ??= (User)HttpContext.Items["user"]!;
         var horseUser = (UserHorse)HttpContext.Items["horseUser"]!;
 
         if (Enum.Parse<UserAccessRole>(horseUser.AccessRole, true) == UserAccessRole.Creator)
         {
-            Horse horse = await db.Horses.SingleAsync(h => h.HorseId == horseId);
-            db.Remove(horse);
+            Horse horse = await _context.Horses.SingleAsync(h => h.HorseId == horseId);
+            _context.Remove(horse);
         }
         else
         {
-            db.Remove(horseUser);
+            _context.Remove(horseUser);
         }
 
-        await db.SaveChangesAsync();
+        await _context.SaveChangesAsync();
         return Ok();
     }
 
@@ -264,33 +277,47 @@ public class HorsesController : ControllerBase
 
         if (horse.Users.Count > 0)
         {
-            foreach (var owner in horse.Users)
+            foreach (var user in horse.Users)
             {
-                if (owner.User == null)
+                if (user.User == null)
                 {
-                    await db.Entry(owner).Reference(o => o.User).LoadAsync();
+                    await _context.Entry(user).Reference(o => o.User).LoadAsync();
+                }
+
+                if (_user!.Id == user.UserId)
+                {
+                    horseDto.Self = new()
+                    {
+                        UserId = _user.Id,
+                        FirstName = _user.FirstName,
+                        LastName = _user.LastName,
+                        PhoneNumber = _user.PhoneNumber,
+                        AccessRole = user.AccessRole,
+                        IsOwner = user.IsOwner,
+                    };
+                    continue;
                 }
 
                 horseDto.Users.Add(new()
                 {
-                    UserId = owner.UserId,
-                    FirstName = owner.User!.FirstName,
-                    LastName = owner.User.LastName,
-                    PhoneNumber = owner.User.PhoneNumber,
-                    IsOwner = owner.IsOwner,
-                    AccessRole = owner.AccessRole
+                    UserId = user.UserId,
+                    FirstName = user.User!.FirstName,
+                    LastName = user.User.LastName,
+                    PhoneNumber = user.User.PhoneNumber,
+                    IsOwner = user.IsOwner,
+                    AccessRole = user.AccessRole
                 });
             }
         }
         else
         {
-            var usersCollection = db.Entry(horse).Collection(h => h.Users);
+            var usersCollection = _context.Entry(horse).Collection(h => h.Users);
             await usersCollection.LoadAsync();
             foreach (var user in usersCollection.CurrentValue!)
             {
-                await db.Entry(user).Reference(o => o.User).LoadAsync();
+                await _context.Entry(user).Reference(o => o.User).LoadAsync();
 
-                if (this.user!.Id == user.UserId)
+                if (_user!.Id == user.UserId)
                 {
                     horseDto.Self = new()
                     {
@@ -316,7 +343,7 @@ public class HorsesController : ControllerBase
             }
         }
 
-        var saves = await _saveService.GetAsync(horse.HorseId, user!.Id, 0, 20);
+        var saves = await _saveService.GetAsync(horse.HorseId, _user!.Id, 0, 20);
         horseDto.Saves = saves;
 
         return horseDto;
