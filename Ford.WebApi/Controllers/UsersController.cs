@@ -104,7 +104,7 @@ public class UsersController : ControllerBase
             Region = user.Region,
             Country = user.Country,
             CreationDate = user.CreationDate,
-            LastUpdatedDate = user.LastUpdatedDate,
+            LastUpdatedDate = user.LastUpdate,
             PhoneNumber = user.PhoneNumber,
         };
 

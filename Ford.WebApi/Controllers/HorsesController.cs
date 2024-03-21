@@ -275,72 +275,35 @@ public class HorsesController : ControllerBase
             LastUpdate = horse.LastUpdate,
         };
 
-        if (horse.Users.Count > 0)
+        var usersCollection = _context.Entry(horse).Collection(h => h.Users);
+        await usersCollection.LoadAsync();
+        foreach (var user in usersCollection.CurrentValue!)
         {
-            foreach (var user in horse.Users)
+            await _context.Entry(user).Reference(o => o.User).LoadAsync();
+
+            if (_user!.Id == user.UserId)
             {
-                if (user.User == null)
-                {
-                    await _context.Entry(user).Reference(o => o.User).LoadAsync();
-                }
-
-                if (_user!.Id == user.UserId)
-                {
-                    horseDto.Self = new()
-                    {
-                        UserId = _user.Id,
-                        FirstName = _user.FirstName,
-                        LastName = _user.LastName,
-                        PhoneNumber = _user.PhoneNumber,
-                        AccessRole = user.AccessRole,
-                        IsOwner = user.IsOwner,
-                    };
-                    continue;
-                }
-
-                horseDto.Users.Add(new()
-                {
-                    UserId = user.UserId,
-                    FirstName = user.User!.FirstName,
-                    LastName = user.User.LastName,
-                    PhoneNumber = user.User.PhoneNumber,
-                    IsOwner = user.IsOwner,
-                    AccessRole = user.AccessRole
-                });
-            }
-        }
-        else
-        {
-            var usersCollection = _context.Entry(horse).Collection(h => h.Users);
-            await usersCollection.LoadAsync();
-            foreach (var user in usersCollection.CurrentValue!)
-            {
-                await _context.Entry(user).Reference(o => o.User).LoadAsync();
-
-                if (_user!.Id == user.UserId)
-                {
-                    horseDto.Self = new()
-                    {
-                        UserId = user.UserId,
-                        FirstName = user.User.FirstName,
-                        LastName = user.User.LastName,
-                        PhoneNumber = user.User.PhoneNumber,
-                        AccessRole = user.AccessRole,
-                        IsOwner = user.IsOwner,
-                    };
-                    continue;
-                }
-
-                horseDto.Users.Add(new()
+                horseDto.Self = new()
                 {
                     UserId = user.UserId,
                     FirstName = user.User.FirstName,
                     LastName = user.User.LastName,
                     PhoneNumber = user.User.PhoneNumber,
+                    AccessRole = user.AccessRole,
                     IsOwner = user.IsOwner,
-                    AccessRole = user.AccessRole
-                });
+                };
+                continue;
             }
+
+            horseDto.Users.Add(new()
+            {
+                UserId = user.UserId,
+                FirstName = user.User.FirstName,
+                LastName = user.User.LastName,
+                PhoneNumber = user.User.PhoneNumber,
+                IsOwner = user.IsOwner,
+                AccessRole = user.AccessRole
+            });
         }
 
         var saves = await _saveService.GetAsync(horse.HorseId, _user!.Id, 0, 20);

@@ -11,6 +11,6 @@ public interface ISaveRepository
     public ResponseResult<Horse> Create(Horse horse, ICollection<RequestCreateSaveDto> requestCreateSaves, long userId);
     public ResponseResult<Horse> Create(Horse horse, RequestCreateSaveDto requestSave, long userId);
     public Task<ResponseSaveDto?> CreateAsync(RequestCreateSaveDto requestSave, long userId);
-    public Task<ResponseSaveDto?> UpdateAsync(RequestUpdateSaveDto requestSave, Save save);
+    public Task<ResponseSaveDto?> UpdateAsync(RequestUpdateSaveDto requestSave, Save save, long userId);
     public Task<bool> DeleteAsync(Save save);
 }

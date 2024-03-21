@@ -40,7 +40,7 @@ public class UserProfiles : Profile
                 dest => dest.CreationDate,
                 opt => opt.MapFrom(src => DateTime.Now))
             .ForMember(
-                dest => dest.LastUpdatedDate,
+                dest => dest.LastUpdate,
                 opt => opt.MapFrom(src => DateTime.Now));
 
         CreateMap<UserForUpdateDto, User>()
@@ -69,7 +69,7 @@ public class UserProfiles : Profile
                 dest => dest.BirthDate,
                 opt => opt.MapFrom(src => src.BirthDate))
             .ForMember(
-                dest => dest.LastUpdatedDate,
+                dest => dest.LastUpdate,
                 opt => opt.MapFrom(src => DateTime.Now));
 
         CreateMap<User, UserGettingDto>()
@@ -105,6 +105,6 @@ public class UserProfiles : Profile
                 opt => opt.MapFrom(src => src.CreationDate))
             .ForMember(
                 dest => dest.LastUpdatedDate,
-                opt => opt.MapFrom(src => src.LastUpdatedDate));
+                opt => opt.MapFrom(src => src.LastUpdate));
     }
 }

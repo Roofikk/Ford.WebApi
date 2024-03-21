@@ -208,6 +208,7 @@ public class UserHorseService : IUserHorseRepository
         _context.Entry(horse).State = EntityState.Modified;
         await _context.Entry(horse).Collection(h => h.Users).LoadAsync();
         var horseUser = horse.Users.SingleOrDefault(u => u.UserId == currentUserId);
+        var creator = horse.Users.SingleOrDefault(u => Enum.Parse<UserAccessRole>(u.AccessRole) == UserAccessRole.Creator);
 
         // check access to action
         if (Enum.Parse<UserAccessRole>(horseUser!.AccessRole) < UserAccessRole.All)
@@ -219,32 +220,21 @@ public class UserHorseService : IUserHorseRepository
             };
         }
 
-        // change self
-        var self = requestUsers.SingleOrDefault(u => u.UserId == currentUserId);
+        // add self
+        var self = requestUsers.SingleOrDefault(u => u.UserId == horseUser.UserId);
 
         if (self == null)
         {
-            return new ResponseResult<Horse>
+            requestUsers.Add(new()
             {
-                Success = false,
-                ErrorMessage = "You not found as horse's user in request body",
-            };
+                AccessRole = horseUser.AccessRole,
+                UserId = horseUser.UserId,
+                IsOwner = horseUser.IsOwner
+            });
         }
-
-        horseUser.IsOwner = self.IsOwner;
-        _context.Entry(horseUser).State = EntityState.Modified;
 
         // select users for delete
         var usersForDeleting = horse.Users.Where(u => !requestUsers.Any(x => x.UserId == u.UserId));
-
-        if (usersForDeleting.Any(u => Enum.Parse<UserAccessRole>(u.AccessRole) >= Enum.Parse<UserAccessRole>(horseUser!.AccessRole)))
-        {
-            return new ResponseResult<Horse>()
-            {
-                Success = false,
-                ErrorMessage = "You cannot delete users who have equal or higher access then your"
-            };
-        }
 
         foreach (var userDelete in usersForDeleting)
         {
@@ -253,15 +243,6 @@ public class UserHorseService : IUserHorseRepository
 
         // select users for add
         var usersForAdding = requestUsers.Where(u => !horse.Users.Any(x => x.UserId == u.UserId));
-
-        if (usersForAdding.Any(u => Enum.Parse<UserAccessRole>(u.AccessRole) >= Enum.Parse<UserAccessRole>(horseUser!.AccessRole)))
-        {
-            return new ResponseResult<Horse>()
-            {
-                Success = false,
-                ErrorMessage = "You cannot add users who have equal or higher access then your"
-            };
-        }
 
         foreach (var addingUser in usersForAdding)
         {
@@ -278,15 +259,6 @@ public class UserHorseService : IUserHorseRepository
             x.UserId == u.UserId &&
             x.IsOwner == u.IsOwner &&
             x.AccessRole == u.AccessRole));
-
-        if (userForChanging.Any(u => Enum.Parse<UserAccessRole>(u.AccessRole) >= Enum.Parse<UserAccessRole>(horseUser!.AccessRole)))
-        {
-            return new ResponseResult<Horse>
-            {
-                Success = false,
-                ErrorMessage = "You cannot set equal or higher access role then your"
-            };
-        }
 
         foreach (var changeUser in userForChanging)
         {
@@ -308,6 +280,33 @@ public class UserHorseService : IUserHorseRepository
                 ErrorMessage = "Cannot be more than one owner"
             };
         }
+
+        // check one or more creators
+        var someCreators = horse.Users.Where(u => Enum.Parse<UserAccessRole>(u.AccessRole) == UserAccessRole.Creator);
+
+        if (someCreators.Count() > 1)
+        {
+            foreach (var c in someCreators)
+            {
+                if (c.UserId != creator.UserId)
+                {
+                    _context.Entry(c).State = EntityState.Deleted;
+                }
+            }
+        }
+
+        // check removing creator
+        if (!someCreators.Any())
+        {
+            creator!.AccessRole = UserAccessRole.Creator.ToString();
+        }
+
+        if (_context.Entry(creator!).State == EntityState.Deleted)
+        {
+            creator!.IsOwner = false;
+        }
+
+        _context.Entry(creator!).State = EntityState.Modified;
 
         await _context.SaveChangesAsync();
         return new ResponseResult<Horse>

@@ -1,4 +1,6 @@
-﻿namespace Ford.WebApi.Dtos.Response;
+﻿using Ford.WebApi.Dtos.Horse;
+
+namespace Ford.WebApi.Dtos.Response;
 
 public interface IResponseSave
 {
@@ -7,4 +9,6 @@ public interface IResponseSave
     public string Header { get; set; }
     public string? Description { get; set; }
     public DateTime? Date { get; set; }
+    public HorseUserDto CreatedByUser { get; set; }
+    public HorseUserDto LastUpdatedUser { get; set; }
 }

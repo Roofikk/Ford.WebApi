@@ -87,9 +87,13 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
                 .WithMany(p => p.Saves)
                 .HasForeignKey(d => d.HorseId);
 
-            entity.HasOne(d => d.User)
-                .WithMany(p => p.Saves)
-                .HasForeignKey(d => d.UserId);
+            entity.HasOne(d => d.CreatedByUser)
+                .WithMany(p => p.CreatedSaves)
+                .HasForeignKey(d => d.CreatedByUserId);
+
+            entity.HasOne(d => d.LastUpdatedByUser)
+                .WithMany(p => p.UpdatedSaves)
+                .HasForeignKey(k => k.LastUpdatedByUserId);
         });
 
         modelBuilder.Entity<SaveBone>(entity =>

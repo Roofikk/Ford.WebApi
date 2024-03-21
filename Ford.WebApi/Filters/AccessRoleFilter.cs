@@ -38,7 +38,7 @@ namespace Ford.WebApi.Filters
 
                     case RequestUpdateSaveDto requestUpdateSaveDto:
                         var save = await _context.Saves.SingleOrDefaultAsync(s => s.SaveId == requestUpdateSaveDto.SaveId);
-                        horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == save.HorseId);
+                        horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == save!.HorseId);
                         break;
                 }
             }
@@ -47,7 +47,7 @@ namespace Ford.WebApi.Filters
             {
                 var saveId = Convert.ToInt64(value);
                 var save = await _context.Saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
-                horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == save.HorseId);
+                horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == save!.HorseId);
             }
 
             if (context.ActionArguments.TryGetValue("requestHorse", out value))

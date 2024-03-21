@@ -4,8 +4,6 @@ using Ford.WebApi.Dtos.Request;
 using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
-using System.Collections.ObjectModel;
 
 namespace Ford.WebApi.Services
 {
@@ -30,7 +28,7 @@ namespace Ford.WebApi.Services
 
             foreach (var save in saves)
             {
-                ResponseSaveDto saveDto = MapSave(save);
+                ResponseSaveDto saveDto = await MapSave(save);
                 savesDto.Add(saveDto);
             }
 
@@ -49,7 +47,7 @@ namespace Ford.WebApi.Services
             var collection = _context.Entry(save).Collection(s => s.SaveBones);
             await collection.LoadAsync();
 
-            ResponseFullSave saveDto = MapSave(save);
+            ResponseFullSave saveDto = await MapSave(save);
             return saveDto;
         }
 
@@ -85,7 +83,8 @@ namespace Ford.WebApi.Services
                 Date = requestSave.Date,
                 CreationDate = DateTime.UtcNow,
                 LastUpdate = DateTime.UtcNow,
-                UserId = userId,
+                CreatedByUserId = userId,
+                LastUpdatedByUserId = userId,
             };
 
             foreach (var bone in requestSave.Bones)
@@ -151,10 +150,12 @@ namespace Ford.WebApi.Services
                 Header = requestSave.Header,
                 Description = requestSave.Description,
                 Date = requestSave.Date,
-                UserId = userId,
                 Horse = horse,
                 CreationDate = DateTime.UtcNow,
                 LastUpdate = DateTime.UtcNow,
+                CreatedByUserId = userId,
+                LastUpdatedByUserId = userId,
+                HorseId = requestSave.HorseId,
             };
 
             foreach (var bone in requestSave.Bones)
@@ -178,10 +179,10 @@ namespace Ford.WebApi.Services
 
             await _context.AddAsync(save);
             await _context.SaveChangesAsync();
-            return MapSave(save);
+            return await MapSave(save);
         }
 
-        public async Task<ResponseSaveDto?> UpdateAsync(RequestUpdateSaveDto requestSave, Save save)
+        public async Task<ResponseSaveDto?> UpdateAsync(RequestUpdateSaveDto requestSave, Save save, long userId)
         {
             var horseReference = _context.Entry(save).Reference(s => s.Horse);
             await horseReference.LoadAsync();
@@ -204,9 +205,10 @@ namespace Ford.WebApi.Services
             save.Description = requestSave.Description;
             save.Date = requestSave.Date;
             save.LastUpdate = DateTime.UtcNow;
+            save.LastUpdatedByUserId = userId;
 
             await _context.SaveChangesAsync();
-            var saveDto = MapSave(save);
+            var saveDto = await MapSave(save);
             return saveDto;
         }
 
@@ -217,9 +219,14 @@ namespace Ford.WebApi.Services
             return true;
         }
 
-        private ResponseFullSave MapSave(Save save)
+        private async Task<ResponseFullSave> MapSave(Save save)
         {
-            ResponseFullSave responseSaveDto = new ResponseFullSave()
+            if (save.CreatedByUser == null)
+            {
+                await _context.Entry(save).Reference(s => s.CreatedByUser).LoadAsync();
+            }
+
+            ResponseFullSave responseSaveDto = new()
             {
                 HorseId = save.HorseId,
                 SaveId = save.SaveId,
@@ -229,6 +236,53 @@ namespace Ford.WebApi.Services
                 LastUpdate = save.LastUpdate,
                 CreationDate = save.CreationDate,
             };
+
+            if (save.CreatedByUser != null)
+            {
+                await _context.Entry(save.CreatedByUser).Collection(c => c.HorseOwners).LoadAsync();
+                var createdByHorseUser = save.CreatedByUser.HorseOwners
+                    .SingleOrDefault(s => s.UserId == save.CreatedByUserId && s.HorseId == save.HorseId);
+
+                responseSaveDto.CreatedByUser = new()
+                {
+                    UserId = save.CreatedByUser.Id,
+                    FirstName = save.CreatedByUser.FirstName,
+                    LastName = save.CreatedByUser.LastName,
+                    PhoneNumber = save.CreatedByUser.PhoneNumber
+                };
+
+                if (createdByHorseUser != null)
+                {
+                    responseSaveDto.CreatedByUser.AccessRole = createdByHorseUser.AccessRole;
+                    responseSaveDto.CreatedByUser.IsOwner = createdByHorseUser.IsOwner;
+                }
+            }
+
+            if (save.LastUpdatedByUser == null)
+            {
+                await _context.Entry(save).Reference(s => s.LastUpdatedByUser).LoadAsync();
+            }
+
+            if (save.LastUpdatedByUser != null)
+            {
+                await _context.Entry(save.LastUpdatedByUser).Collection(c => c.HorseOwners).LoadAsync();
+                var lastUpdatedByHorseUser = save.LastUpdatedByUser.HorseOwners
+                    .SingleOrDefault(s => s.UserId == save.LastUpdatedByUserId && s.HorseId == save.HorseId);
+
+                responseSaveDto.LastUpdatedUser = new()
+                {
+                    UserId = save.LastUpdatedByUser.Id,
+                    FirstName = save.LastUpdatedByUser.FirstName,
+                    LastName = save.LastUpdatedByUser.LastName,
+                    PhoneNumber = save.LastUpdatedByUser.PhoneNumber
+                };
+
+                if (lastUpdatedByHorseUser != null)
+                {
+                    responseSaveDto.LastUpdatedUser.AccessRole = lastUpdatedByHorseUser.AccessRole;
+                    responseSaveDto.LastUpdatedUser.IsOwner = lastUpdatedByHorseUser.IsOwner;
+                }
+            }
 
             foreach (var bone in save.SaveBones)
             {

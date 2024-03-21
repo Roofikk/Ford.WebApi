@@ -6,12 +6,6 @@ namespace Ford.WebApi.Data.Entities;
 
 public class User : IdentityUser<long>
 {
-    public User() : base()
-    {
-        HorseOwners = [];
-        Saves = [];
-    }
-
     [Column(TypeName = "varchar(64)")]
     public override string? UserName { get => base.UserName; set => base.UserName = value; }
     [Column(TypeName = "varchar(64)")]
@@ -39,13 +33,14 @@ public class User : IdentityUser<long>
     [Column(TypeName = "datetime")]
     public DateTime CreationDate { get; set; }
     [Column(TypeName = "datetime")]
-    public DateTime LastUpdatedDate { get; set; }
+    public DateTime LastUpdate { get; set; }
     [Column(TypeName = "varchar(64)")]
     public string RefreshToken { get; set; } = string.Empty;
     [Column(TypeName = "datetime")]
     public DateTime RefreshTokenExpiresDate { get; set; }
 
     [InverseProperty("User")]
-    public virtual ICollection<UserHorse> HorseOwners { get; }
-    public virtual ICollection<Save> Saves { get; }
+    public ICollection<UserHorse> HorseOwners { get; } = [];
+    public ICollection<Save> CreatedSaves { get; } = [];
+    public ICollection<Save> UpdatedSaves { get; } = [];
 }

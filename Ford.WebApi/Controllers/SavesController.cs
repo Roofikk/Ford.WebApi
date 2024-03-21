@@ -1,14 +1,11 @@
 ﻿using Ford.WebApi.Data;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.Response;
-using Ford.WebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.ObjectModel;
 using Ford.WebApi.Dtos.Request;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Identity;
 using Ford.WebApi.Services;
 using Ford.WebApi.Filters;
 
@@ -76,6 +73,8 @@ public class SavesController : ControllerBase
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
     public async Task<ActionResult<ResponseSaveDto>> Update([FromBody] RequestUpdateSaveDto requestSave)
     {
+        _user ??= (User)HttpContext.Items["user"]!;
+
         Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == requestSave.SaveId);
 
         if (save is null)
@@ -83,7 +82,7 @@ public class SavesController : ControllerBase
             return NotFound();
         }
 
-        var saveDto = await _saveService.UpdateAsync(requestSave, save);
+        var saveDto = await _saveService.UpdateAsync(requestSave, save, _user.Id);
 
         if (saveDto == null)
         {

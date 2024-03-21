@@ -27,6 +27,6 @@ public class HorseUserDto
     public string FirstName { get; set; } = null!;
     public string? LastName { get; set; }
     public string? PhoneNumber { get; set; }
-    public bool IsOwner { get; set; }
-    public string AccessRole { get; set; } = null!;
+    public bool? IsOwner { get; set; }
+    public string? AccessRole { get; set; }
 }

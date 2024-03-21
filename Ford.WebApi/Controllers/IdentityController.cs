@@ -55,7 +55,7 @@ public class IdentityController : ControllerBase
             Email = request.Email,
             BirthDate = request.BirthDate,
             CreationDate = DateTime.UtcNow,
-            LastUpdatedDate = DateTime.UtcNow
+            LastUpdate = DateTime.UtcNow
         };
 
         IdentityResult result = await userManager.CreateAsync(user, request.Password);
@@ -101,7 +101,7 @@ public class IdentityController : ControllerBase
             Region = user.Region,
             Country = user.Country,
             CreationDate = user.CreationDate,
-            LastUpdatedDate = user.LastUpdatedDate,
+            LastUpdatedDate = user.LastUpdate,
         };
 
         return userDto;
@@ -206,7 +206,7 @@ public class IdentityController : ControllerBase
             Region = user.Region,
             Country = user.Country,
             CreationDate = user.CreationDate,
-            LastUpdatedDate = user.LastUpdatedDate,
+            LastUpdatedDate = user.LastUpdate,
         };
         return userDto;
     }
@@ -245,7 +245,7 @@ public class IdentityController : ControllerBase
         user.PhoneNumber = request.PhoneNumber;
         user.Country = request.Country;
         user.BirthDate = request.BirthDate is null ? null : request.BirthDate;
-        user.LastUpdatedDate = DateTime.UtcNow;
+        user.LastUpdate = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
 
@@ -263,7 +263,7 @@ public class IdentityController : ControllerBase
             Region = user.Region,
             Country = user.Country,
             CreationDate = user.CreationDate,
-            LastUpdatedDate = user.LastUpdatedDate,
+            LastUpdatedDate = user.LastUpdate,
         };
         return Ok(userDto);
     }

@@ -14,7 +14,8 @@ public class Save
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long SaveId { get; set; }
     public long HorseId { get; set; }
-    public long UserId { get; set; }
+    public long? CreatedByUserId { get; set; }
+    public long? LastUpdatedByUserId { get; set; }
     [Column(TypeName = "varchar(64)")]
     public string Header { get; set; } = null!;
     [Column(TypeName = "TEXT")]
@@ -26,7 +27,8 @@ public class Save
     [Column(TypeName = "datetime")]
     public DateTime LastUpdate { get; set; }
 
-    public virtual Horse Horse { get; set; } = null!;
-    public virtual User User { get; set; } = null!;
+    public Horse Horse { get; set; } = null!;
+    public User? CreatedByUser { get; set; }
+    public User? LastUpdatedByUser { get; set; }
     public virtual ICollection<SaveBone> SaveBones { get; }
 }
