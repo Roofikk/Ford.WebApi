@@ -18,8 +18,7 @@ public class Horse
     public string Name { get; set; } = null!;
     [Column(TypeName = "TEXT")]
     public string? Description { get; set; }
-    [Column(TypeName = "date")]
-    public DateTime? BirthDate { get; set; }
+    public DateOnly? BirthDate { get; set; }
     [Column(TypeName = "varchar(16)")]
     public string? Sex { get; set; }
     [Column(TypeName = "nvarchar(32)")]
@@ -28,9 +27,7 @@ public class Horse
     public string? Region { get; set; }
     [Column(TypeName = "nvarchar(32)")]
     public string? Country { get; set; }
-    [Column(TypeName = "datetime")]
     public DateTime CreationDate { get; set; }
-    [Column(TypeName = "datetime")]
     public DateTime LastUpdate { get; set; }
     [Column(TypeName = "varchar(32)")]
     public string? OwnerName { get; set; }

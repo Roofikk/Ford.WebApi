@@ -7,17 +7,20 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
-using Ford.WebApi.Extensions;
 using Ford.WebApi.Services.Identity;
 using Ford.WebApi.Extensions.Authentication;
 using Ford.WebApi.Services;
 using Ford.WebApi.Filters;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
-builder.Services.AddFordContext();
+builder.Services.AddDbContext<FordContext>(opts =>
+{
+    opts.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
 builder.Services.AddAuthentication(options =>
 {
@@ -113,11 +116,9 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
 }
-
-app.UseHttpsRedirection();
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseAuthentication();
 app.UseAuthorization();

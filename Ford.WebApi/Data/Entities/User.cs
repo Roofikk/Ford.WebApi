@@ -28,15 +28,11 @@ public class User : IdentityUser<long>
     public string? Region { get; set; }
     [Column(TypeName = "varchar(64)")]
     public string? Country { get; set; }
-    [Column(TypeName = "date")]
-    public DateTime? BirthDate { get; set; }
-    [Column(TypeName = "datetime")]
+    public DateOnly? BirthDate { get; set; }
     public DateTime CreationDate { get; set; }
-    [Column(TypeName = "datetime")]
     public DateTime LastUpdate { get; set; }
-    [Column(TypeName = "varchar(64)")]
+    [Column(TypeName = "varchar(128)")]
     public string RefreshToken { get; set; } = string.Empty;
-    [Column(TypeName = "datetime")]
     public DateTime RefreshTokenExpiresDate { get; set; }
 
     [InverseProperty("User")]

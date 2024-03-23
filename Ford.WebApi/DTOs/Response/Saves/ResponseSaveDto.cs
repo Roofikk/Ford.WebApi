@@ -9,7 +9,7 @@ public class ResponseSaveDto : IResponseSave
     public long HorseId { get; set; }
     public string Header { get; set; } = null!;
     public string? Description { get; set; }
-    public DateTime? Date { get; set; }
+    public DateOnly? Date { get; set; }
     public DateTime CreationDate { get; set; }
     public DateTime LastUpdate { get; set; }
     public HorseUserDto CreatedByUser { get; set; } = null!;

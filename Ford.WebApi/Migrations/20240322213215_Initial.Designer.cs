@@ -3,6 +3,7 @@ using System;
 using Ford.WebApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -11,20 +12,26 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Ford.WebApi.Migrations
 {
     [DbContext(typeof(FordContext))]
-    [Migration("20240310094751_RemoveEmailIndex")]
-    partial class RemoveEmailIndex
+    [Migration("20240322213215_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.1");
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.3")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("Ford.WebApi.Data.Entities.Horse", b =>
                 {
                     b.Property<long>("HorseId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("HorseId"));
 
                     b.Property<DateTime?>("BirthDate")
                         .HasColumnType("date");
@@ -72,9 +79,17 @@ namespace Ford.WebApi.Migrations
                 {
                     b.Property<long>("SaveId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
-                    b.Property<DateTime?>("Date")
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("SaveId"));
+
+                    b.Property<long?>("CreatedByUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTime>("Date")
                         .HasColumnType("datetime");
 
                     b.Property<string>("Description")
@@ -85,16 +100,21 @@ namespace Ford.WebApi.Migrations
                         .HasColumnType("varchar(64)");
 
                     b.Property<long>("HorseId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
-                    b.Property<long>("UserId")
-                        .HasColumnType("INTEGER");
+                    b.Property<DateTime>("LastUpdate")
+                        .HasColumnType("datetime");
+
+                    b.Property<long?>("LastUpdatedByUserId")
+                        .HasColumnType("bigint");
 
                     b.HasKey("SaveId");
 
+                    b.HasIndex("CreatedByUserId");
+
                     b.HasIndex("HorseId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("LastUpdatedByUserId");
 
                     b.ToTable("Saves");
                 });
@@ -103,32 +123,34 @@ namespace Ford.WebApi.Migrations
                 {
                     b.Property<long>("SaveBoneId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("SaveBoneId"));
 
                     b.Property<string>("BoneId")
                         .IsRequired()
                         .HasColumnType("nvarchar(32)");
 
                     b.Property<float?>("PositionX")
-                        .HasColumnType("REAL");
+                        .HasColumnType("real");
 
                     b.Property<float?>("PositionY")
-                        .HasColumnType("REAL");
+                        .HasColumnType("real");
 
                     b.Property<float?>("PositionZ")
-                        .HasColumnType("REAL");
+                        .HasColumnType("real");
 
                     b.Property<float?>("RotationX")
-                        .HasColumnType("REAL");
+                        .HasColumnType("real");
 
                     b.Property<float?>("RotationY")
-                        .HasColumnType("REAL");
+                        .HasColumnType("real");
 
                     b.Property<float?>("RotationZ")
-                        .HasColumnType("REAL");
+                        .HasColumnType("real");
 
                     b.Property<long>("SaveId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
                     b.HasKey("SaveBoneId");
 
@@ -141,10 +163,12 @@ namespace Ford.WebApi.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("BirthDate")
                         .HasColumnType("date");
@@ -154,7 +178,7 @@ namespace Ford.WebApi.Migrations
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Country")
                         .HasColumnType("varchar(64)");
@@ -167,7 +191,7 @@ namespace Ford.WebApi.Migrations
                         .HasColumnType("varchar(64)");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -176,14 +200,14 @@ namespace Ford.WebApi.Migrations
                     b.Property<string>("LastName")
                         .HasColumnType("varchar(64)");
 
-                    b.Property<DateTime>("LastUpdatedDate")
+                    b.Property<DateTime>("LastUpdate")
                         .HasColumnType("datetime");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -194,13 +218,13 @@ namespace Ford.WebApi.Migrations
                         .HasColumnType("varchar(64)");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("varchar(32)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("RefreshToken")
                         .IsRequired()
@@ -213,10 +237,10 @@ namespace Ford.WebApi.Migrations
                         .HasColumnType("varchar(64)");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
@@ -225,7 +249,6 @@ namespace Ford.WebApi.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
-                        .IsUnique()
                         .HasDatabaseName("IX_UserEmails");
 
                     b.HasIndex("FirstName")
@@ -235,16 +258,17 @@ namespace Ford.WebApi.Migrations
                         .HasDatabaseName("IX_UserLastNames");
 
                     b.HasIndex("NormalizedEmail")
-                        .IsUnique()
                         .HasDatabaseName("EmailIndex");
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
-                        .HasDatabaseName("UserNameIndex");
+                        .HasDatabaseName("UserNameIndex")
+                        .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.HasIndex("UserName")
                         .IsUnique()
-                        .HasDatabaseName("IX_UserNames");
+                        .HasDatabaseName("IX_UserNames")
+                        .HasFilter("[UserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -252,17 +276,17 @@ namespace Ford.WebApi.Migrations
             modelBuilder.Entity("Ford.WebApi.Data.Entities.UserHorse", b =>
                 {
                     b.Property<long>("UserId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
                     b.Property<long>("HorseId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
-                    b.Property<bool>("IsOwner")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("RuleAccess")
+                    b.Property<string>("AccessRole")
                         .IsRequired()
                         .HasColumnType("nvarchar(8)");
+
+                    b.Property<bool>("IsOwner")
+                        .HasColumnType("bit");
 
                     b.HasKey("UserId", "HorseId");
 
@@ -275,25 +299,28 @@ namespace Ford.WebApi.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasDatabaseName("RoleNameIndex");
+                        .HasDatabaseName("RoleNameIndex")
+                        .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles", (string)null);
                 });
@@ -302,16 +329,18 @@ namespace Ford.WebApi.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("RoleId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -324,16 +353,18 @@ namespace Ford.WebApi.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("UserId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -345,16 +376,16 @@ namespace Ford.WebApi.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<long>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("UserId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
                     b.HasKey("LoginProvider", "ProviderKey");
 
@@ -366,10 +397,10 @@ namespace Ford.WebApi.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<long>", b =>
                 {
                     b.Property<long>("UserId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
                     b.Property<long>("RoleId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
                     b.HasKey("UserId", "RoleId");
 
@@ -381,16 +412,16 @@ namespace Ford.WebApi.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<long>", b =>
                 {
                     b.Property<long>("UserId")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Name")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Value")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
@@ -399,21 +430,25 @@ namespace Ford.WebApi.Migrations
 
             modelBuilder.Entity("Ford.WebApi.Data.Entities.Save", b =>
                 {
+                    b.HasOne("Ford.WebApi.Data.Entities.User", "CreatedByUser")
+                        .WithMany("CreatedSaves")
+                        .HasForeignKey("CreatedByUserId");
+
                     b.HasOne("Ford.WebApi.Data.Entities.Horse", "Horse")
                         .WithMany("Saves")
                         .HasForeignKey("HorseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Ford.WebApi.Data.Entities.User", "User")
-                        .WithMany("Saves")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasOne("Ford.WebApi.Data.Entities.User", "LastUpdatedByUser")
+                        .WithMany("UpdatedSaves")
+                        .HasForeignKey("LastUpdatedByUserId");
+
+                    b.Navigation("CreatedByUser");
 
                     b.Navigation("Horse");
 
-                    b.Navigation("User");
+                    b.Navigation("LastUpdatedByUser");
                 });
 
             modelBuilder.Entity("Ford.WebApi.Data.Entities.SaveBone", b =>
@@ -511,9 +546,11 @@ namespace Ford.WebApi.Migrations
 
             modelBuilder.Entity("Ford.WebApi.Data.Entities.User", b =>
                 {
+                    b.Navigation("CreatedSaves");
+
                     b.Navigation("HorseOwners");
 
-                    b.Navigation("Saves");
+                    b.Navigation("UpdatedSaves");
                 });
 #pragma warning restore 612, 618
         }

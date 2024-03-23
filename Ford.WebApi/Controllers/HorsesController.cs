@@ -275,9 +275,9 @@ public class HorsesController : ControllerBase
             LastUpdate = horse.LastUpdate,
         };
 
-        var usersCollection = _context.Entry(horse).Collection(h => h.Users);
-        await usersCollection.LoadAsync();
-        foreach (var user in usersCollection.CurrentValue!)
+        await _context.Entry(horse).Collection(h => h.Users).LoadAsync();
+
+        foreach (var user in horse.Users)
         {
             await _context.Entry(user).Reference(o => o.User).LoadAsync();
 

@@ -20,11 +20,8 @@ public class Save
     public string Header { get; set; } = null!;
     [Column(TypeName = "TEXT")]
     public string? Description { get; set; }
-    [Column(TypeName = "datetime")]
-    public DateTime Date { get; set; }
-    [Column(TypeName = "datetime")]
+    public DateOnly Date { get; set; }
     public DateTime CreationDate { get; set; }
-    [Column(TypeName = "datetime")]
     public DateTime LastUpdate { get; set; }
 
     public Horse Horse { get; set; } = null!;

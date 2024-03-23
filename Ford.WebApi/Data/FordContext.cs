@@ -14,8 +14,6 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
     public FordContext(DbContextOptions<FordContext> options)
         : base(options)
     {
-        //Database.EnsureDeleted();
-        //Database.EnsureCreated();
     }
 
     public virtual DbSet<Horse> Horses { get; set; } = null!;
@@ -25,7 +23,10 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite("Filename=../Ford.db");
+        string connection = "Server=RUFIKDESKTOP;Database=db-ford;User=dataworker;Password=Rufik2024;" +
+                            "TrustServerCertificate=True;" +
+                            "MultipleActiveResultSets=True;";
+        optionsBuilder.UseSqlServer(connection);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
