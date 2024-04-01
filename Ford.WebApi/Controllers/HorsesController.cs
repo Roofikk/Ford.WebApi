@@ -105,11 +105,24 @@ public class HorsesController : ControllerBase
         }
     }
 
+    public async Task<IActionResult> PushHistory(ICollection<StorageHistory<IStorageAction>> history)
+    {
+        foreach (var historyDto in history)
+        {
+            switch (historyDto.ActionType)
+            {
+
+            }
+        }
+
+        return Ok();
+    }
+
     [HttpPost]
     [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<HorseRetrievingDto>> CreateAsync([FromBody] HorseForCreationDto requestHorse)
+    public async Task<ActionResult<HorseRetrievingDto>> CreateAsync([FromBody] HorseCreatingDto requestHorse)
     {
         _user ??= (User)HttpContext.Items["user"]!;
 
@@ -184,7 +197,7 @@ public class HorsesController : ControllerBase
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
-    public async Task<ActionResult<HorseRetrievingDto>> UpdateAsync([FromBody] RequestUpdateHorseDto requestHorse)
+    public async Task<ActionResult<HorseRetrievingDto>> UpdateAsync([FromBody] HorseUpdatingDto requestHorse)
     {
         _user ??= (User)HttpContext.Items["user"]!;
 

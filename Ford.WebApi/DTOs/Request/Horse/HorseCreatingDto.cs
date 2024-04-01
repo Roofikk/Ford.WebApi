@@ -3,7 +3,7 @@ using Ford.WebApi.Models.Horse;
 
 namespace Ford.WebApi.Dtos.Horse;
 
-public class HorseForCreationDto
+public class HorseCreatingDto : IStorageAction
 {
     public string Name { get; set; } = null!;
     public string? Description { get; set; }

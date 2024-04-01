@@ -1,6 +1,8 @@
-﻿namespace Ford.WebApi.Dtos.Request;
+﻿using Ford.WebApi.Dtos.Horse;
 
-public class RequestCreateSaveDto : IRequestSave
+namespace Ford.WebApi.Dtos.Request;
+
+public class RequestCreateSaveDto : IRequestSave, IStorageAction
 {
     public long HorseId { get; set; }
     public string Header { get; set; } = null!;

@@ -52,7 +52,7 @@ namespace Ford.WebApi.Filters
 
             if (context.ActionArguments.TryGetValue("requestHorse", out value))
             {
-                var requestHorse = value as RequestUpdateHorseDto;
+                var requestHorse = value as HorseUpdatingDto;
                 horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == requestHorse!.HorseId);
             }
 
