@@ -63,11 +63,12 @@ namespace Ford.WebApi.Services
                     return new ServiceResult<ICollection<Save>>()
                     {
                         Success = false,
+                        ErrorMessage = result.ErrorMessage
                     };
                 }
                 else
                 {
-                    saves.Add(result.Result);
+                    saves.Add(result.Result!);
                 }
             }
 
@@ -124,38 +125,39 @@ namespace Ford.WebApi.Services
             };
         }
 
-        public async Task<SaveDto?> CreateAsync(SaveCreatingDto requestSave, long userId)
+        public async Task<ServiceResult<SaveDto>> CreateAsync(SaveCreatingDto requestSave, long userId)
         {
-            UserHorse? owner = await _context.HorseUsers.SingleOrDefaultAsync(
-            o => o.UserId == userId && o.HorseId == requestSave.HorseId);
+            UserHorse? owner = await _context.HorseUsers
+                .SingleOrDefaultAsync(o => o.UserId == userId && o.HorseId == requestSave.HorseId);
 
             if (owner is null)
             {
-                return null;
+                return new ServiceResult<SaveDto>()
+                {
+                    Success = false,
+                    ErrorMessage = "User not found",
+                };
             }
 
             UserAccessRole currentOwnerRole = Enum.Parse<UserAccessRole>(owner.AccessRole);
 
             if (currentOwnerRole < UserAccessRole.Write)
             {
-                return null;
+                return new ServiceResult<SaveDto>()
+                {
+                    Success = false,
+                    ErrorMessage = "User does not have write access",
+                };
             }
 
-            var reference = _context.Entry(owner).Reference(o => o.Horse);
-            await reference.LoadAsync();
-            Horse? horse = reference.CurrentValue;
-
-            if (horse is null)
-            {
-                return null;
-            }
+            await _context.Entry(owner).Reference(o => o.Horse).LoadAsync();
 
             Save save = new()
             {
                 Header = requestSave.Header,
                 Description = requestSave.Description,
                 Date = requestSave.Date,
-                Horse = horse,
+                Horse = owner.Horse,
                 CreationDate = DateTime.UtcNow,
                 LastUpdate = DateTime.UtcNow,
                 CreatedByUserId = userId,
@@ -180,29 +182,51 @@ namespace Ford.WebApi.Services
                 });
             }
 
-            horse.LastUpdate = DateTime.UtcNow;
+            owner.Horse.LastUpdate = DateTime.UtcNow;
 
             await _context.AddAsync(save);
-            return await MapSave(save);
+            return new ServiceResult<SaveDto>()
+            {
+                Success = true,
+                Result = await MapSave(save),
+            };
         }
 
-        public async Task<SaveDto?> UpdateAsync(RequestUpdateSaveDto requestSave, Save save, long userId)
+        public async Task<ServiceResult<SaveDto>> UpdateAsync(RequestUpdateSaveDto requestSave, long userId)
         {
-            var horseReference = _context.Entry(save).Reference(s => s.Horse);
-            await horseReference.LoadAsync();
+            var save = await _context.Saves
+                .SingleOrDefaultAsync(s => s.SaveId == requestSave.SaveId);
 
-            if (!horseReference.IsLoaded)
+            if (save == null)
             {
-                return null;
+                return new ServiceResult<SaveDto>()
+                {
+                    Success = false,
+                    ErrorMessage = "Save not found"
+                };
             }
 
-            // get owners by horse
-            var collection = _context.Entry(horseReference.CurrentValue!).Collection(h => h.Users);
-            await collection.LoadAsync();
+            await _context.Entry(save).Reference(s => s.Horse).LoadAsync();
+            await _context.Entry(save).Collection(s => s.Horse.Users).LoadAsync();
 
-            if (!collection.IsLoaded)
+            var currentUser = save.Horse.Users.SingleOrDefault(u => u.UserId == userId);
+
+            if (currentUser == null)
             {
-                return null;
+                return new ServiceResult<SaveDto>()
+                {
+                    Success = false,
+                    ErrorMessage = "User not found"
+                };
+            }
+
+            if (Enum.Parse<UserAccessRole>(currentUser.AccessRole) < UserAccessRole.Write)
+            {
+                return new ServiceResult<SaveDto>()
+                {
+                    Success = false,
+                    ErrorMessage = "User does not have permission to update this save"
+                };
             }
 
             save.Header = requestSave.Header;
@@ -213,13 +237,24 @@ namespace Ford.WebApi.Services
 
             _context.Entry(save).State = EntityState.Modified;
             var saveDto = await MapSave(save);
-            return saveDto;
+            return new ServiceResult<SaveDto>()
+            {
+                Success = true,
+                Result = saveDto
+            };
         }
 
-        public async Task<bool> DeleteAsync(Save save)
+        public async Task<bool> DeleteAsync(long saveId)
         {
+            var save = await _context.Saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
+
+            if (save == null)
+            {
+                return false;
+            }
+
             _context.Entry(save).State = EntityState.Deleted;
-            return await Task.FromResult(true);
+            return true;
         }
 
         public async Task<int> SaveChangesAsync()

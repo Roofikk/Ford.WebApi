@@ -1,9 +1,7 @@
-﻿using Ford.WebApi.Data;
-using Ford.WebApi.Data.Entities;
+﻿using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Ford.WebApi.Dtos.Request;
 using System.ComponentModel.DataAnnotations;
 using Ford.WebApi.Services;
@@ -17,13 +15,11 @@ namespace Ford.WebApi.Controllers;
 [ServiceFilter(typeof(UserFilter))]
 public class SavesController : ControllerBase
 {
-    private readonly FordContext db;
     private readonly ISaveRepository _saveService;
     private User? _user;
 
-    public SavesController(FordContext db, ISaveRepository saveRepository)
+    public SavesController(ISaveRepository saveRepository)
     {
-        this.db = db;
         _saveService = saveRepository;
     }
 
@@ -57,14 +53,15 @@ public class SavesController : ControllerBase
     {
         // get authorize user
         _user ??= (User)HttpContext.Items["user"]!;
-        var saveDto = await _saveService.CreateAsync(requestSave, _user.Id);
+        var result = await _saveService.CreateAsync(requestSave, _user.Id);
 
-        if (saveDto == null)
+        if (!result.Success)
         {
             return BadRequest();
         }
 
-        return Created($"api/[controller]?horseId={requestSave.HorseId}&saveId={saveDto.SaveId}", saveDto);
+        await _saveService.SaveChangesAsync();
+        return Created($"api/[controller]?horseId={requestSave.HorseId}&saveId={result.Result!.SaveId}", result.Result);
     }
 
     // PUT api/<SavesController>/5
@@ -75,21 +72,15 @@ public class SavesController : ControllerBase
     {
         _user ??= (User)HttpContext.Items["user"]!;
 
-        Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == requestSave.SaveId);
+        var result = await _saveService.UpdateAsync(requestSave, _user.Id);
 
-        if (save is null)
-        {
-            return NotFound();
-        }
-
-        var saveDto = await _saveService.UpdateAsync(requestSave, save, _user.Id);
-
-        if (saveDto == null)
+        if (!result.Success)
         {
             return BadRequest();
         }
 
-        return saveDto;
+        await _saveService.SaveChangesAsync();
+        return result.Result!;
     }
 
     // DELETE api/[controller]?saveId=5
@@ -97,16 +88,10 @@ public class SavesController : ControllerBase
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
     public async Task<IActionResult> Delete([Required] long saveId)
     {
-        Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
-
-        if (save is null)
-        {
-            return NotFound();
-        }
-
-        var result = await _saveService.DeleteAsync(save);
+        var result = await _saveService.DeleteAsync(saveId);
         if (result)
         {
+            await _saveService.SaveChangesAsync();
             return Ok();
         }
         else
