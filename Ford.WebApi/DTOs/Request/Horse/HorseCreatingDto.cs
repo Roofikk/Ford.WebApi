@@ -3,7 +3,7 @@ using Ford.WebApi.Models.Horse;
 
 namespace Ford.WebApi.Dtos.Horse;
 
-public class HorseCreatingDto : IStorageAction
+public class HorseCreatingDto
 {
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
@@ -14,6 +14,6 @@ public class HorseCreatingDto : IStorageAction
     public string? Country { get; set; }
     public string? OwnerName { get; set; }
     public string? OwnerPhoneNumber { get; set; }
-    public ICollection<RequestCreateSaveDto> Saves { get; set; } = [];
+    public ICollection<SaveCreatingDto> Saves { get; set; } = [];
     public ICollection<RequestHorseUser> Users { get; set; } = [];
 }

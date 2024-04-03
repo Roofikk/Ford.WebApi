@@ -12,6 +12,7 @@ using Ford.WebApi.Extensions.Authentication;
 using Ford.WebApi.Services;
 using Ford.WebApi.Filters;
 using Microsoft.EntityFrameworkCore;
+using Ford.WebApi.Services.HorseService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -105,6 +106,7 @@ builder.Services.AddScoped<UserFilter>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ISaveRepository, SaveRepository>();
+builder.Services.AddScoped<IHorseRepository, HorseRepository>();
 builder.Services.AddScoped<IUserHorseRepository, UserHorseService>();
 
 builder.Services.AddOptions<JwtSettings>()

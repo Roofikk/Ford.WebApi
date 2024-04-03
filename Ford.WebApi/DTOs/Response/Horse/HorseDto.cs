@@ -2,7 +2,7 @@
 
 namespace Ford.WebApi.Dtos.Horse;
 
-public class HorseRetrievingDto
+public class HorseDto : IStorageAction
 {
     public long HorseId { get; set; }
     public string Name { get; set; } = null!;
@@ -18,7 +18,7 @@ public class HorseRetrievingDto
     public string? OwnerPhoneNumber { get; set; }
     public HorseUserDto Self { get; set; } = null!;
     public ICollection<HorseUserDto> Users { get; set; } = [];
-    public ICollection<ResponseSaveDto> Saves { get; set; } = [];
+    public ICollection<SaveDto> Saves { get; set; } = [];
 }
 
 public class HorseUserDto
@@ -27,6 +27,6 @@ public class HorseUserDto
     public string FirstName { get; set; } = null!;
     public string? LastName { get; set; }
     public string? PhoneNumber { get; set; }
-    public bool? IsOwner { get; set; }
-    public string? AccessRole { get; set; }
+    public bool IsOwner { get; set; }
+    public string AccessRole { get; set; } = null!;
 }

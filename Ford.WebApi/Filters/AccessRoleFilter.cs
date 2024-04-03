@@ -32,7 +32,7 @@ namespace Ford.WebApi.Filters
                 
                 switch (requestSave)
                 {
-                    case RequestCreateSaveDto requestCreateSaveDto:
+                    case SaveCreatingDto requestCreateSaveDto:
                         horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == requestCreateSaveDto.HorseId);
                         break;
 

@@ -1,15 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Ford.WebApi.Data.Entities;
-using Ford.WebApi.Data;
 using Microsoft.AspNetCore.Authorization;
-using System.Collections.ObjectModel;
 using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Dtos.Horse;
 using Microsoft.AspNetCore.Http.Extensions;
 using System.Net;
 using Ford.WebApi.Filters;
 using Ford.WebApi.Services;
+using Ford.WebApi.Services.HorseService;
+using Ford.WebApi.Dtos.Request;
 
 namespace Ford.WebApi.Controllers;
 
@@ -19,21 +18,19 @@ namespace Ford.WebApi.Controllers;
 [ServiceFilter(typeof(UserFilter))]
 public class HorsesController : ControllerBase
 {
-    private readonly FordContext _context;
-    private readonly ISaveRepository _saveService;
-    private readonly IUserHorseRepository _horseUserService;
+    private readonly IHorseRepository _horseRepository;
+    private readonly ISaveRepository _saveRepository;
     private User? _user = null;
 
-    public HorsesController(FordContext db, ISaveRepository saveRepository, IUserHorseRepository userHorseRepository)
+    public HorsesController(IHorseRepository horseRepository, ISaveRepository saveRepository)
     {
-        this._context = db;
-        _saveService = saveRepository;
-        _horseUserService = userHorseRepository;
+        _horseRepository = horseRepository;
+        _saveRepository = saveRepository;
     }
 
     [HttpGet()]
-    [ProducesResponseType(typeof(RetrieveArray<HorseRetrievingDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RetrieveArray<HorseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HorseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult> GetAsync(long? horseId, int below = 0, int amount = 20,
         string orderByDate = "desc", string orderByName = "false")
@@ -42,76 +39,183 @@ public class HorsesController : ControllerBase
 
         if (horseId == null)
         {
-            var queryableHorses = _context.Horses.Where(h => h.Users.Any(o => o.UserId == _user.Id));
-
-            switch (orderByDate)
-            {
-                case "true":
-                    queryableHorses = queryableHorses.OrderBy(o => o.LastUpdate);
-                    break;
-                case "desc":
-                    queryableHorses = queryableHorses.OrderByDescending(o => o.LastUpdate);
-                    break;
-            }
-
-            switch (orderByName)
-            {
-                case "true":
-                    queryableHorses = queryableHorses.OrderBy(o => o.Name);
-                    break;
-                case "desc":
-                    queryableHorses = queryableHorses.OrderByDescending(o => o.Name);
-                    break;
-            }
-
-            IEnumerable<Horse> horses = queryableHorses
-                .Skip(below)
-                .Take(amount)
-                .AsEnumerable();
-
-            List<HorseRetrievingDto> horsesDto = [];
+            var horses = await _horseRepository.GetAsync(_user.Id, below, amount, orderByDate, orderByName);
 
             if (!horses.Any())
             {
-                return Ok(new RetrieveArray<HorseRetrievingDto>());
+                return Ok(new RetrieveArray<HorseDto>());
             }
             else
             {
-                foreach (var horse in horses)
-                {
-                    var horseDto = await MapHorse(horse);
-                    horsesDto.Add(horseDto);
-                }
-
-                return Ok(new RetrieveArray<HorseRetrievingDto>(horsesDto.ToArray()));
+                return Ok(horses);
             }
         }
         else
         {
-            var horse = await _context.Horses
-                .SingleOrDefaultAsync(h => h.HorseId == horseId);
+            var horse = await _horseRepository.GetByIdAsync(_user.Id, horseId.Value);
 
             if (horse is null)
             {
                 return NotFound(new BadResponse(
                     Request.GetDisplayUrl(),
-                    "Not found",
+                    "NotFound",
                     HttpStatusCode.Unauthorized,
-                    new Collection<Error> { new("Horse not found", "Horse not exists") }));
+                    new List<Error> { new("Horse not found", "Horse not exists") }));
             }
 
-            HorseRetrievingDto horseDto = await MapHorse(horse);
-            return Ok(horseDto);
+            return Ok(horse);
         }
     }
 
+    [HttpPost()]
+    [Route("history")]
     public async Task<IActionResult> PushHistory(ICollection<StorageHistory<IStorageAction>> history)
     {
-        foreach (var historyDto in history)
-        {
-            switch (historyDto.ActionType)
-            {
+        _user ??= (User)HttpContext.Items["user"]!;
 
+        // reformat history to Create/Update/Delete horse
+        var historyHorsesGrouped = history.GroupBy(x => x.ActionType)
+            .Where(x => x.Key == ActionType.CreateHorse || x.Key == ActionType.UpdateHorse || x.Key == ActionType.DeleteHorse)
+            .ToList();
+
+        foreach (var historyGroup in historyHorsesGrouped)
+        {
+            switch (historyGroup.Key)
+            {
+                case ActionType.CreateHorse:
+                    foreach (var creatingHorseAction in historyGroup)
+                    {
+                        var creatingHorse = creatingHorseAction.Data as HorseDto ??
+                            throw new ArgumentException("CreatingHorseAction is not HorseRetrievingDto");
+
+                        var horseSaves = history.Where(x => x.Data is FullSaveDto saveDto && saveDto.HorseId == creatingHorse.HorseId);
+                        
+                        var creatingHorseDto = new HorseCreatingDto()
+                        {
+                            Name = creatingHorse.Name,
+                            Description = creatingHorse.Description,
+                            Sex = creatingHorse.Sex,
+                            BirthDate = creatingHorse.BirthDate,
+                            City = creatingHorse.City,
+                            Region = creatingHorse.Region,
+                            Country = creatingHorse.Country,
+                            OwnerName = creatingHorse.OwnerName,
+                            OwnerPhoneNumber = creatingHorse.OwnerPhoneNumber,
+                        };
+
+                        foreach (var horseSave in horseSaves)
+                        {
+                            var horseSaveDto = horseSave.Data as FullSaveDto 
+                                ?? throw new ArgumentException("HorseSaveAction is not SaveCreatingDto");
+
+                            var creatingSave = new SaveCreatingDto()
+                            {
+                                HorseId = horseSaveDto.HorseId,
+                                Header = horseSaveDto.Header,
+                                Description = horseSaveDto.Description,
+                                Date = horseSaveDto.Date,
+                                Bones = horseSaveDto.Bones
+                            };
+
+                            creatingHorseDto.Saves.Add(creatingSave);
+                        }
+
+                        foreach (var horseUser in creatingHorse.Users)
+                        {
+                            creatingHorseDto.Users.Add(new()
+                            {
+                                UserId = horseUser.UserId,
+                                AccessRole = horseUser.AccessRole,
+                                IsOwner = horseUser.IsOwner
+                            });
+                        }
+
+                        await _horseRepository.CreateAsync(_user, creatingHorseDto);
+                    }
+                    break;
+                case ActionType.UpdateHorse:
+                    foreach (var updatingHorseAction in historyGroup)
+                    {
+                        var updatingHorse = updatingHorseAction.Data as HorseDto ??
+                            throw new ArgumentException("UpdatingHorseAction is not HorseRetrievingDto");
+
+                        var updatingHorseDto = new HorseUpdatingDto()
+                        {
+                            HorseId = updatingHorse.HorseId,
+                            Name = updatingHorse.Name,
+                            Description = updatingHorse.Description,
+                            Sex = updatingHorse.Sex,
+                            BirthDate = updatingHorse.BirthDate,
+                            City = updatingHorse.City,
+                            Region = updatingHorse.Region,
+                            Country = updatingHorse.Country,
+                            OwnerName = updatingHorse.OwnerName,
+                            OwnerPhoneNumber = updatingHorse.OwnerPhoneNumber,
+                        };
+
+                        foreach (var horseUser in updatingHorse.Users)
+                        {
+                            updatingHorseDto.Users.Add(new()
+                            {
+                                UserId = horseUser.UserId,
+                                AccessRole = horseUser.AccessRole,
+                                IsOwner = horseUser.IsOwner
+                            });
+                        }
+
+                        await _horseRepository.UpdateAsync(_user, updatingHorseDto);
+
+                        var horseSavesGroup = history.Where(x => x.Data is FullSaveDto saveDto && saveDto.HorseId == updatingHorse.HorseId)
+                            .GroupBy(x => x.ActionType);
+
+                        foreach (var saveGroup in horseSavesGroup)
+                        {
+                            switch (saveGroup.Key)
+                            {
+                                case ActionType.CreateSave:
+                                    foreach (var saveAction in saveGroup)
+                                    {
+                                        var save = saveAction.Data as FullSaveDto ??
+                                            throw new ArgumentException("SaveAction is not SaveCreatingDto");
+                                        var creatingSave = new SaveCreatingDto()
+                                        {
+                                            HorseId = updatingHorse.HorseId,
+                                            Header = save.Header,
+                                            Date = save.Date,
+                                            Description = save.Description,
+                                        };
+
+                                        foreach (var bone in save.Bones)
+                                        {
+                                            creatingSave.Bones.Add(new()
+                                            {
+                                                BoneId = bone.BoneId,
+                                                Position = bone.Position,
+                                                Rotation = bone.Rotation,
+                                            });
+                                        }
+
+                                        await _saveRepository.CreateAsync(creatingSave, _user.Id);
+                                    }
+                                    break;
+                                case ActionType.UpdateSave:
+                                    foreach (var saveAction in saveGroup)
+                                    {
+                                        var save = saveAction.Data as FullSaveDto ??
+                                            throw new ArgumentException("SaveAction is not SaveCreatingDto");
+                                        var updatingSave = new RequestUpdateSaveDto()
+                                        {
+                                            SaveId = save.SaveId,
+                                            Header = save.Header,
+                                            Date = save.Date,
+                                            Description = save.Description,
+                                        };
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                    break;
             }
         }
 
@@ -119,209 +223,71 @@ public class HorsesController : ControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HorseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<HorseRetrievingDto>> CreateAsync([FromBody] HorseCreatingDto requestHorse)
+    public async Task<ActionResult<HorseDto>> CreateAsync([FromBody] HorseCreatingDto requestHorse)
     {
         _user ??= (User)HttpContext.Items["user"]!;
+        var creatingResult = await _horseRepository.CreateAsync(_user, requestHorse);
 
-        Horse horse = new()
-        {
-            Name = requestHorse.Name,
-            Description = requestHorse.Description,
-            BirthDate = requestHorse.BirthDate,
-            Sex = requestHorse.Sex,
-            City = requestHorse.City,
-            Region = requestHorse.Region,
-            Country = requestHorse.Country,
-            CreationDate = DateTime.UtcNow,
-            LastUpdate = DateTime.UtcNow
-        };
-
-        //Check the possibility of granting role to an object
-        var check = requestHorse.Users
-            .Where(u => u.UserId != _user.Id && Enum.Parse<UserAccessRole>(u.AccessRole) >= UserAccessRole.Creator);
-
-        if (check.Any())
+        if (!creatingResult.Success)
         {
             return BadRequest(new BadResponse(
                 Request.GetDisplayUrl(),
-                "Role Access",
+                "AddHorseError",
                 HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Invalid Role", "Some roles access can not be greater or equal than your") }));
+                [new("Exception", creatingResult.ErrorMessage!)]));
         }
 
-        var result = _horseUserService.Create(_user, horse, requestHorse.Users);
-
-        if (!result.Success)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Add users error",
-                HttpStatusCode.BadRequest,
-                [new("Exception", result.ErrorMessage!)]));
-        }
-
-        horse = result.Result!;
-
-        var findOwner = horse.Users.SingleOrDefault(u => u.IsOwner);
-
-        if (findOwner == null)
-        {
-            horse.OwnerName = requestHorse.OwnerName;
-            horse.OwnerPhoneNumber = requestHorse.OwnerPhoneNumber;
-        }
-
-        var creaeteSaveResult = _saveService.Create(horse, requestHorse.Saves, _user.Id);
-
-        if (!creaeteSaveResult.Success)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Add saves error",
-                HttpStatusCode.BadRequest,
-                [new("Exception", result.ErrorMessage!)]));
-        }
-
-        horse = result.Result!;
-
-        var entry = _context.Horses.Add(horse);
-        await _context.SaveChangesAsync();
-
-        return Created($"api/[controller]/horseId={horse.HorseId}", await MapHorse(entry.Entity));
+        await _horseRepository.SaveChangesAsync();
+        return Created(HttpContext.Request.GetDisplayUrl(), creatingResult.Result!);
     }
 
     [HttpPut]
-    [ProducesResponseType(typeof(HorseRetrievingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HorseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
-    public async Task<ActionResult<HorseRetrievingDto>> UpdateAsync([FromBody] HorseUpdatingDto requestHorse)
+    public async Task<ActionResult<HorseDto>> UpdateAsync([FromBody] HorseUpdatingDto requestHorse)
     {
         _user ??= (User)HttpContext.Items["user"]!;
+        var updatingResult = await _horseRepository.UpdateAsync(_user, requestHorse);
 
-        Horse? entity = await _context.Horses.Include(h => h.Users)
-            .FirstOrDefaultAsync(h => h.HorseId == requestHorse.HorseId);
-
-        if (entity == null)
+        if (!updatingResult.Success)
         {
             return BadRequest(new BadResponse(
                 Request.GetDisplayUrl(),
-                "Bad Request",
+                "UpdateHorseError",
                 HttpStatusCode.BadRequest,
-                new Collection<Error> { new("Object non-existent", $"Horse (id: {requestHorse.HorseId}) not found") }));
+                [new("Exception", updatingResult.ErrorMessage!)]));
         }
 
-        entity.Name = requestHorse.Name;
-        entity.BirthDate = requestHorse.BirthDate;
-        entity.Sex = requestHorse.Sex;
-        entity.City = requestHorse.City;
-        entity.Region = requestHorse.Region;
-        entity.Country = requestHorse.Country;
-
-        var result = await _horseUserService.UpdateAsync(_user.Id, entity, requestHorse.Users);
-
-        if (!result.Success)
-        {
-            return BadRequest(new BadResponse(
-                Request.GetDisplayUrl(),
-                "Update users error",
-                HttpStatusCode.BadRequest,
-                [new("Exception", result.ErrorMessage!)]));
-        }
-
-        entity = result.Result!;
-        _context.Entry(entity).State = EntityState.Modified;
-
-        if (entity.Users.SingleOrDefault(u => u.IsOwner) == null)
-        {
-            entity.OwnerName = requestHorse.OwnerName;
-            entity.OwnerPhoneNumber = requestHorse.OwnerPhoneNumber;
-        }
-        else
-        {
-            entity.OwnerName = null;
-            entity.OwnerPhoneNumber = null;
-        }
-
-        await _context.SaveChangesAsync();
-        return await MapHorse(entity);
+        await _horseRepository.SaveChangesAsync();
+        return Ok(updatingResult.Result!);
     }
 
     [HttpDelete]
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Read])]
     public async Task<IActionResult> DeleteAsync(long horseId)
     {
-        _user ??= (User)HttpContext.Items["user"]!;
         var horseUser = (UserHorse)HttpContext.Items["horseUser"]!;
 
-        if (Enum.Parse<UserAccessRole>(horseUser.AccessRole, true) == UserAccessRole.Creator)
+
+        var deletingResult = await _horseRepository.DeleteAsync(horseUser, horseId);
+
+        if (!deletingResult)
         {
-            Horse horse = await _context.Horses.SingleAsync(h => h.HorseId == horseId);
-            _context.Remove(horse);
-        }
-        else
-        {
-            _context.Remove(horseUser);
+            return BadRequest();
         }
 
-        await _context.SaveChangesAsync();
+        var result = await _horseRepository.SaveChangesAsync();
+
+        if (result == 0)
+        {
+            return BadRequest();
+        }
+
         return Ok();
-    }
-
-    private async Task<HorseRetrievingDto> MapHorse(Horse horse)
-    {
-        HorseRetrievingDto horseDto = new()
-        {
-            HorseId = horse.HorseId,
-            Name = horse.Name,
-            Description = horse.Description,
-            BirthDate = horse.BirthDate,
-            Sex = horse.Sex,
-            City = horse.City,
-            Region = horse.Region,
-            Country = horse.Country,
-            OwnerName = horse.OwnerName,
-            OwnerPhoneNumber = horse.OwnerPhoneNumber,
-            CreationDate = horse.CreationDate,
-            LastUpdate = horse.LastUpdate,
-        };
-
-        await _context.Entry(horse).Collection(h => h.Users).LoadAsync();
-
-        foreach (var user in horse.Users)
-        {
-            await _context.Entry(user).Reference(o => o.User).LoadAsync();
-
-            if (_user!.Id == user.UserId)
-            {
-                horseDto.Self = new()
-                {
-                    UserId = user.UserId,
-                    FirstName = user.User.FirstName,
-                    LastName = user.User.LastName,
-                    PhoneNumber = user.User.PhoneNumber,
-                    AccessRole = user.AccessRole,
-                    IsOwner = user.IsOwner,
-                };
-                continue;
-            }
-
-            horseDto.Users.Add(new()
-            {
-                UserId = user.UserId,
-                FirstName = user.User.FirstName,
-                LastName = user.User.LastName,
-                PhoneNumber = user.User.PhoneNumber,
-                IsOwner = user.IsOwner,
-                AccessRole = user.AccessRole
-            });
-        }
-
-        var saves = await _saveService.GetAsync(horse.HorseId, _user!.Id, 0, 20);
-        horseDto.Saves = saves;
-
-        return horseDto;
     }
 }

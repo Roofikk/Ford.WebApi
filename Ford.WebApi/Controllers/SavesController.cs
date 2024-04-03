@@ -29,8 +29,8 @@ public class SavesController : ControllerBase
 
     // GET: api/<SavesController>/{horseId}
     [HttpGet()]
-    [ProducesResponseType(typeof(ResponseFullSave), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(IEnumerable<ResponseSaveDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FullSaveDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<SaveDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Get([Required] long horseId, long? saveId, int below = 0, int amount = 20)
@@ -53,7 +53,7 @@ public class SavesController : ControllerBase
     // Create
     [HttpPost()]
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
-    public async Task<ActionResult<ResponseSaveDto>> Create([FromBody] RequestCreateSaveDto requestSave)
+    public async Task<ActionResult<SaveDto>> Create([FromBody] SaveCreatingDto requestSave)
     {
         // get authorize user
         _user ??= (User)HttpContext.Items["user"]!;
@@ -71,7 +71,7 @@ public class SavesController : ControllerBase
     // Update
     [HttpPut()]
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
-    public async Task<ActionResult<ResponseSaveDto>> Update([FromBody] RequestUpdateSaveDto requestSave)
+    public async Task<ActionResult<SaveDto>> Update([FromBody] RequestUpdateSaveDto requestSave)
     {
         _user ??= (User)HttpContext.Items["user"]!;
 

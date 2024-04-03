@@ -2,4 +2,5 @@
 
 public interface IStorageAction
 {
+    public long HorseId { get; set; }
 }

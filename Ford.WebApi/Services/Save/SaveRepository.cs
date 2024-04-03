@@ -16,9 +16,9 @@ namespace Ford.WebApi.Services
             _context = context;
         }
 
-        public async Task<ICollection<ResponseSaveDto>> GetAsync(long horseId, long userId, int below = 0, int amount = 20)
+        public async Task<ICollection<SaveDto>> GetAsync(long horseId, long userId, int below = 0, int amount = 20)
         {
-            List<ResponseSaveDto> savesDto = [];
+            List<SaveDto> savesDto = [];
             var saves = _context.Saves.Where(s => s.HorseId == horseId && s.Horse.Users.Any(o => o.UserId == userId))
                 .OrderBy(o => o.LastUpdate)
                 .Skip(below)
@@ -28,14 +28,14 @@ namespace Ford.WebApi.Services
 
             foreach (var save in saves)
             {
-                ResponseSaveDto saveDto = await MapSave(save);
+                SaveDto saveDto = await MapSave(save);
                 savesDto.Add(saveDto);
             }
 
             return savesDto;
         }
 
-        public async Task<ResponseFullSave?> GetAsync(long horseId, long saveId, long userId)
+        public async Task<FullSaveDto?> GetAsync(long horseId, long saveId, long userId)
         {
             var save = await _context.Saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
 
@@ -47,34 +47,38 @@ namespace Ford.WebApi.Services
             var collection = _context.Entry(save).Collection(s => s.SaveBones);
             await collection.LoadAsync();
 
-            ResponseFullSave saveDto = await MapSave(save);
+            FullSaveDto saveDto = await MapSave(save);
             return saveDto;
         }
 
-        public ResponseResult<Horse> Create(Horse horse, ICollection<RequestCreateSaveDto> requestCreateSaves, long userId)
+        public ServiceResult<ICollection<Save>> Create(ICollection<SaveCreatingDto> requestCreateSaves, long userId)
         {
+            List<Save> saves = new();
             foreach (var save in requestCreateSaves)
             {
-                var result = Create(horse, save, userId);
+                var result = Create(save, userId);
 
-                if (result.Success)
+                if (!result.Success)
                 {
-                    horse = result.Result!;
+                    return new ServiceResult<ICollection<Save>>()
+                    {
+                        Success = false,
+                    };
                 }
                 else
                 {
-                    return result;
+                    saves.Add(result.Result);
                 }
             }
 
-            return new ResponseResult<Horse>
+            return new ServiceResult<ICollection<Save>>
             {
                 Success = true,
-                Result = horse,
+                Result = saves
             };
         }
 
-        public ResponseResult<Horse> Create(Horse horse, RequestCreateSaveDto requestSave, long userId)
+        public ServiceResult<Save> Create(SaveCreatingDto requestSave, long userId)
         {
             var save = new Save()
             {
@@ -111,15 +115,16 @@ namespace Ford.WebApi.Services
                 save.SaveBones.Add(saveBone);
             }
 
-            horse.Saves.Add(save);
-            return new ResponseResult<Horse>
+            _context.Entry(save).State = EntityState.Added;
+
+            return new ServiceResult<Save>
             {
                 Success = true,
-                Result = horse,
+                Result = save,
             };
         }
 
-        public async Task<ResponseSaveDto?> CreateAsync(RequestCreateSaveDto requestSave, long userId)
+        public async Task<SaveDto?> CreateAsync(SaveCreatingDto requestSave, long userId)
         {
             UserHorse? owner = await _context.HorseUsers.SingleOrDefaultAsync(
             o => o.UserId == userId && o.HorseId == requestSave.HorseId);
@@ -178,11 +183,10 @@ namespace Ford.WebApi.Services
             horse.LastUpdate = DateTime.UtcNow;
 
             await _context.AddAsync(save);
-            await _context.SaveChangesAsync();
             return await MapSave(save);
         }
 
-        public async Task<ResponseSaveDto?> UpdateAsync(RequestUpdateSaveDto requestSave, Save save, long userId)
+        public async Task<SaveDto?> UpdateAsync(RequestUpdateSaveDto requestSave, Save save, long userId)
         {
             var horseReference = _context.Entry(save).Reference(s => s.Horse);
             await horseReference.LoadAsync();
@@ -207,26 +211,30 @@ namespace Ford.WebApi.Services
             save.LastUpdate = DateTime.UtcNow;
             save.LastUpdatedByUserId = userId;
 
-            await _context.SaveChangesAsync();
+            _context.Entry(save).State = EntityState.Modified;
             var saveDto = await MapSave(save);
             return saveDto;
         }
 
         public async Task<bool> DeleteAsync(Save save)
         {
-            _context.Remove(save);
-            await _context.SaveChangesAsync();
-            return true;
+            _context.Entry(save).State = EntityState.Deleted;
+            return await Task.FromResult(true);
         }
 
-        private async Task<ResponseFullSave> MapSave(Save save)
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
+
+        private async Task<FullSaveDto> MapSave(Save save)
         {
             if (save.CreatedByUser == null)
             {
                 await _context.Entry(save).Reference(s => s.CreatedByUser).LoadAsync();
             }
 
-            ResponseFullSave responseSaveDto = new()
+            FullSaveDto responseSaveDto = new()
             {
                 HorseId = save.HorseId,
                 SaveId = save.SaveId,
