@@ -1,11 +1,11 @@
 ﻿namespace Ford.WebApi.Dtos.Horse;
 
-public class StorageHistory<T> where T : IStorageAction
+public class StorageHistory
 {
     public ActionType ActionType { get; set; }
-    public T Data { get; set; }
+    public IStorageData Data { get; set; }
 
-    public StorageHistory(ActionType actionType, T data)
+    public StorageHistory(ActionType actionType, IStorageData data)
     {
         ActionType = actionType;
         Data = data;

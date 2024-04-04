@@ -32,7 +32,7 @@ public class HorsesController : ControllerBase
     [ProducesResponseType(typeof(RetrieveArray<HorseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HorseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult> GetAsync(long? horseId, int below = 0, int amount = 20,
+    public async Task<IActionResult> GetAsync(long? horseId, int below = 0, int amount = 20,
         string orderByDate = "desc", string orderByName = "false")
     {
         _user ??= (User)HttpContext.Items["user"]!;
@@ -69,9 +69,12 @@ public class HorsesController : ControllerBase
 
     [HttpPost()]
     [Route("history")]
-    public async Task<IActionResult> PushHistory(ICollection<StorageHistory<IStorageAction>> history)
+    public async Task<ActionResult<ICollection<ServiceResult<StorageHistory>>>> PushHistory(
+        [FromBody] ICollection<StorageHistory> history)
     {
         _user ??= (User)HttpContext.Items["user"]!;
+
+        var response = new List<ServiceResult<StorageHistory>>();
 
         // reformat history to Create/Update/Delete horse
         var historyHorsesGrouped = history.GroupBy(x => x.ActionType)
@@ -108,9 +111,8 @@ public class HorsesController : ControllerBase
                             var horseSaveDto = horseSave.Data as FullSaveDto 
                                 ?? throw new ArgumentException("HorseSaveAction is not SaveCreatingDto");
 
-                            var creatingSave = new SaveCreatingDto()
+                            var creatingSave = new HorseSaveCreatingDto()
                             {
-                                HorseId = horseSaveDto.HorseId,
                                 Header = horseSaveDto.Header,
                                 Description = horseSaveDto.Description,
                                 Date = horseSaveDto.Date,
@@ -130,7 +132,14 @@ public class HorsesController : ControllerBase
                             });
                         }
 
-                        await _horseRepository.CreateAsync(_user, creatingHorseDto);
+                        var horseCreateResult = await _horseRepository.CreateAsync(_user, creatingHorseDto);
+
+                        response.Add(new()
+                        {
+                            Success = horseCreateResult.Success,
+                            ErrorMessage = horseCreateResult.ErrorMessage,
+                            Result = creatingHorseAction
+                        });
                     }
                     break;
                 case ActionType.UpdateHorse:
@@ -163,7 +172,14 @@ public class HorsesController : ControllerBase
                             });
                         }
 
-                        await _horseRepository.UpdateAsync(_user, updatingHorseDto);
+                        var horseUpdateResult = await _horseRepository.UpdateAsync(_user, updatingHorseDto);
+
+                        response.Add(new()
+                        {
+                            Success = horseUpdateResult.Success,
+                            ErrorMessage = horseUpdateResult.ErrorMessage,
+                            Result = updatingHorseAction
+                        });
 
                         var horseSavesGroup = history.Where(x => x.Data is FullSaveDto saveDto && saveDto.HorseId == updatingHorse.HorseId)
                             .GroupBy(x => x.ActionType);
@@ -195,7 +211,14 @@ public class HorsesController : ControllerBase
                                             });
                                         }
 
-                                        await _saveRepository.CreateAsync(creatingSave, _user.Id);
+                                        var saveCreateResult = await _saveRepository.CreateToExistHorseAsync(creatingSave, _user.Id);
+
+                                        response.Add(new()
+                                        {
+                                            Success = saveCreateResult.Success,
+                                            ErrorMessage = saveCreateResult.ErrorMessage,
+                                            Result = saveAction
+                                        });
                                     }
                                     break;
                                 case ActionType.UpdateSave:
@@ -210,10 +233,49 @@ public class HorsesController : ControllerBase
                                             Date = save.Date,
                                             Description = save.Description,
                                         };
+
+                                        var saveUpdateResult = await _saveRepository.UpdateAsync(updatingSave, _user.Id);
+
+                                        response.Add(new()
+                                        {
+                                            Success = saveUpdateResult.Success,
+                                            ErrorMessage = saveUpdateResult.ErrorMessage,
+                                            Result = saveAction
+                                        });
+                                    }
+                                    break;
+                                case ActionType.DeleteSave:
+                                    foreach (var saveAction in saveGroup)
+                                    {
+                                        var save = saveAction.Data as FullSaveDto ??
+                                            throw new ArgumentException("SaveAction is not SaveCreatingDto");
+
+                                        var saveDeleteResult = await _saveRepository.DeleteAsync(save.SaveId, _user.Id);
+
+                                        response.Add(new()
+                                        {
+                                            Success = saveDeleteResult,
+                                            Result = saveAction
+                                        });
                                     }
                                     break;
                             }
                         }
+                    }
+                    break;
+                case ActionType.DeleteHorse:
+                    foreach (var deletingHorseAction in historyGroup)
+                    {
+                        var deletingHorse = deletingHorseAction.Data as HorseDto ??
+                            throw new ArgumentException("DeletingHorseAction is not HorseRetrievingDto");
+
+                        var deletingHorseResult = await _horseRepository.DeleteAsync(deletingHorse.HorseId, _user.Id);
+
+                        response.Add(new()
+                        {
+                            Success = deletingHorseResult,
+                            Result = deletingHorseAction,
+                        });
                     }
                     break;
             }
@@ -272,9 +334,7 @@ public class HorsesController : ControllerBase
     public async Task<IActionResult> DeleteAsync(long horseId)
     {
         var horseUser = (UserHorse)HttpContext.Items["horseUser"]!;
-
-
-        var deletingResult = await _horseRepository.DeleteAsync(horseUser, horseId);
+        var deletingResult = await _horseRepository.DeleteAsync(horseId, horseUser.UserId);
 
         if (!deletingResult)
         {

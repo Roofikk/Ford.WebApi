@@ -53,7 +53,7 @@ public class SavesController : ControllerBase
     {
         // get authorize user
         _user ??= (User)HttpContext.Items["user"]!;
-        var result = await _saveService.CreateAsync(requestSave, _user.Id);
+        var result = await _saveService.CreateToExistHorseAsync(requestSave, _user.Id);
 
         if (!result.Success)
         {
@@ -88,7 +88,9 @@ public class SavesController : ControllerBase
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
     public async Task<IActionResult> Delete([Required] long saveId)
     {
-        var result = await _saveService.DeleteAsync(saveId);
+        _user ??= (User)HttpContext.Items["user"]!;
+
+        var result = await _saveService.DeleteAsync(saveId, _user.Id);
         if (result)
         {
             await _saveService.SaveChangesAsync();

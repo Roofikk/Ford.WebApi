@@ -2,7 +2,7 @@
 
 namespace Ford.WebApi.Dtos.Horse;
 
-public class HorseDto : IStorageAction
+public class HorseDto : IStorageData
 {
     public long HorseId { get; set; }
     public string Name { get; set; } = null!;

@@ -1,6 +1,6 @@
 ﻿namespace Ford.WebApi.Dtos.Horse;
 
-public interface IStorageAction
+public interface IStorageData
 {
     public long HorseId { get; set; }
 }

@@ -119,7 +119,7 @@ public class HorseRepository : IHorseRepository
             horse.OwnerPhoneNumber = horseDto.OwnerPhoneNumber;
         }
 
-        var createSaveResult = _saveService.Create(horseDto.Saves, user.Id);
+        var createSaveResult = _saveService.Create(horseDto.Saves, horse, user.Id);
 
         if (!createSaveResult.Success)
         {
@@ -191,8 +191,15 @@ public class HorseRepository : IHorseRepository
         };
     }
 
-    public async Task<bool> DeleteAsync(UserHorse user, long horseId)
+    public async Task<bool> DeleteAsync(long horseId, long userId)
     {
+        var user = await _context.HorseUsers.SingleOrDefaultAsync(x => x.UserId == userId && x.HorseId == horseId);
+
+        if (user == null)
+        {
+            return false;
+        }
+
         if (Enum.Parse<UserAccessRole>(user.AccessRole, true) == UserAccessRole.Creator)
         {
             Horse horse = await _context.Horses.SingleAsync(h => h.HorseId == horseId);
@@ -208,11 +215,21 @@ public class HorseRepository : IHorseRepository
 
     public async Task<int> SaveChangesAsync()
     {
-        var result = 0;
-        result += await _context.SaveChangesAsync();
-        result += await _userHorseRepository.SaveChangesAsync();
-        result += await _saveService.SaveChangesAsync();
-        return result;
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var result = 0;
+            result += await _context.SaveChangesAsync();
+            result += await _userHorseRepository.SaveChangesAsync();
+            result += await _saveService.SaveChangesAsync();
+            transaction.Commit();
+            return result;
+        }
+        catch (Exception)
+        {
+            transaction.Rollback();
+            return 0;
+        }
     }
 
     private async Task<HorseDto> MapHorse(Horse horse, long userId)

@@ -1,5 +1,4 @@
 ﻿using Ford.WebApi.Dtos.Horse;
-using Ford.WebApi.Dtos.Request;
 
 namespace Ford.WebApi.Dtos.Response;
 

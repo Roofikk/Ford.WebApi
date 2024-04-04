@@ -13,11 +13,17 @@ using Ford.WebApi.Services;
 using Ford.WebApi.Filters;
 using Microsoft.EntityFrameworkCore;
 using Ford.WebApi.Services.HorseService;
+using Ford.WebApi.JsonConverters;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(opts =>
+    {
+        opts.SerializerSettings.Converters.Add(new StorageDataConverter());
+    });
+
 builder.Services.AddDbContext<FordContext>(opts =>
 {
     opts.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
