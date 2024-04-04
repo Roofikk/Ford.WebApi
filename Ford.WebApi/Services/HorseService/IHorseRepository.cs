@@ -12,5 +12,5 @@ public interface IHorseRepository
     public Task<ServiceResult<HorseDto>> CreateAsync(User user, HorseCreatingDto horseDto);
     public Task<ServiceResult<HorseDto>> UpdateAsync(User user, HorseUpdatingDto horseDto);
     public Task<bool> DeleteAsync(long horseId, long userId);
-    public Task<int> SaveChangesAsync();
+    public Task<int?> SaveChangesAsync();
 }

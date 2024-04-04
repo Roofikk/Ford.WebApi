@@ -213,7 +213,7 @@ public class HorseRepository : IHorseRepository
         return true;
     }
 
-    public async Task<int> SaveChangesAsync()
+    public async Task<int?> SaveChangesAsync()
     {
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
@@ -228,7 +228,7 @@ public class HorseRepository : IHorseRepository
         catch (Exception)
         {
             transaction.Rollback();
-            return 0;
+            return null;
         }
     }
 

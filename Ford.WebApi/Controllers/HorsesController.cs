@@ -281,7 +281,18 @@ public class HorsesController : ControllerBase
             }
         }
 
-        return Ok();
+        var result = await _horseRepository.SaveChangesAsync();
+
+        if (result == null)
+        {
+            return BadRequest(new BadResponse(
+                Request.GetDisplayUrl(),
+                "SaveChangesError",
+                HttpStatusCode.BadRequest,
+                [new("Exception", "Save changes error")]));
+        }
+
+        return response;
     }
 
     [HttpPost]
