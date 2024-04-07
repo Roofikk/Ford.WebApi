@@ -22,7 +22,7 @@ public class HorseRepository : IHorseRepository
 
     public async Task<HorseDto?> GetByIdAsync(long userId, long horseId)
     {
-        var horse = await _context.Horses.SingleOrDefaultAsync(h => h.HorseId == horseId && h.Users.Any(u => u.UserId == userId));
+        var horse = await _context.Horses.SingleOrDefaultAsync(h => h.HorseId == horseId && h.HorseUsers.Any(u => u.UserId == userId));
 
         if (horse == null)
         {
@@ -35,15 +35,15 @@ public class HorseRepository : IHorseRepository
     public async Task<ICollection<HorseDto>> GetAsync(long userId, int below = 0,
         int amount = 20, string orderByDate = "desc", string orderByName = "false")
     {
-        var queryableHorses = _context.Horses.Where(h => h.Users.Any(o => o.UserId == userId));
+        var queryableHorses = _context.Horses.Where(h => h.HorseUsers.Any(o => o.UserId == userId));
 
         switch (orderByDate)
         {
             case "true":
-                queryableHorses = queryableHorses.OrderBy(o => o.LastUpdate);
+                queryableHorses = queryableHorses.OrderBy(o => o.CreationDate);
                 break;
             case "desc":
-                queryableHorses = queryableHorses.OrderByDescending(o => o.LastUpdate);
+                queryableHorses = queryableHorses.OrderByDescending(o => o.LastModified);
                 break;
         }
 
@@ -83,8 +83,9 @@ public class HorseRepository : IHorseRepository
             City = horseDto.City,
             Region = horseDto.Region,
             Country = horseDto.Country,
+            LastModifiedByUserId = user.Id,
             CreationDate = DateTime.UtcNow,
-            LastUpdate = DateTime.UtcNow
+            LastModified = DateTime.UtcNow
         };
 
         //Check the possibility of granting role to an object
@@ -111,7 +112,7 @@ public class HorseRepository : IHorseRepository
             };
         }
 
-        var findOwner = horse.Users.SingleOrDefault(u => u.IsOwner);
+        var findOwner = horse.HorseUsers.SingleOrDefault(u => u.IsOwner);
 
         if (findOwner == null)
         {
@@ -141,7 +142,7 @@ public class HorseRepository : IHorseRepository
 
     public async Task<ServiceResult<HorseDto>> UpdateAsync(User user, HorseUpdatingDto horseDto)
     {
-        Horse? entity = await _context.Horses.Include(h => h.Users)
+        Horse? entity = await _context.Horses.Include(h => h.HorseUsers)
             .FirstOrDefaultAsync(h => h.HorseId == horseDto.HorseId);
 
         if (entity == null)
@@ -159,6 +160,8 @@ public class HorseRepository : IHorseRepository
         entity.City = horseDto.City;
         entity.Region = horseDto.Region;
         entity.Country = horseDto.Country;
+        entity.LastModifiedByUserId = user.Id;
+        entity.LastModified = DateTime.UtcNow;
 
         var result = await _userHorseRepository.UpdateAsync(user.Id, entity.HorseId, horseDto.Users);
 
@@ -173,7 +176,7 @@ public class HorseRepository : IHorseRepository
 
         _context.Entry(entity).State = EntityState.Modified;
 
-        if (entity.Users.SingleOrDefault(u => u.IsOwner) == null)
+        if (entity.HorseUsers.SingleOrDefault(u => u.IsOwner) == null)
         {
             entity.OwnerName = horseDto.OwnerName;
             entity.OwnerPhoneNumber = horseDto.OwnerPhoneNumber;
@@ -234,6 +237,9 @@ public class HorseRepository : IHorseRepository
 
     private async Task<HorseDto> MapHorse(Horse horse, long userId)
     {
+        await _context.Entry(horse).Collection(h => h.HorseUsers).LoadAsync();
+        await _context.Entry(horse).Reference(h => h.LastModifiedByUser).LoadAsync();
+
         HorseDto horseDto = new()
         {
             HorseId = horse.HorseId,
@@ -246,14 +252,49 @@ public class HorseRepository : IHorseRepository
             Country = horse.Country,
             OwnerName = horse.OwnerName,
             OwnerPhoneNumber = horse.OwnerPhoneNumber,
-            CreationDate = horse.CreationDate,
-            LastUpdate = horse.LastUpdate,
         };
 
-        await _context.Entry(horse).Collection(h => h.Users).LoadAsync();
-
-        foreach (var user in horse.Users)
+        horseDto.CreatedBy = new()
         {
+            Date = horse.CreationDate,
+        };
+
+        HorseUser createdUser = horse.HorseUsers.Single(x => x.AccessRole == UserAccessRole.Creator.ToString());
+
+        horseDto.CreatedBy.User = new()
+        {
+            AccessRole = createdUser!.AccessRole,
+            IsOwner = createdUser!.IsOwner,
+            UserId = createdUser!.UserId,
+            FirstName = createdUser.User.FirstName,
+            LastName = createdUser.User.LastName,
+            PhoneNumber = createdUser.User.PhoneNumber
+        };
+
+        horseDto.LastModifiedBy = new()
+        {
+            Date = horse.LastModified,
+        };
+
+        var lastUpdateUser = horse.HorseUsers.SingleOrDefault(x => x.UserId == horse.LastModifiedByUserId);
+
+        horseDto.LastModifiedBy.User = new()
+        {
+            AccessRole = lastUpdateUser?.AccessRole ?? "None",
+            IsOwner = lastUpdateUser?.IsOwner ?? false,
+            UserId = horse.LastModifiedByUser?.Id ?? -1,
+            FirstName = horse.LastModifiedByUser?.FirstName ?? "None",
+            LastName = horse.LastModifiedByUser?.LastName,
+            PhoneNumber = horse.LastModifiedByUser?.PhoneNumber
+        };
+
+        foreach (var user in horse.HorseUsers)
+        {
+            if (_context.Entry(user).State == EntityState.Deleted)
+            {
+                continue;
+            }
+
             await _context.Entry(user).Reference(o => o.User).LoadAsync();
 
             if (userId == user.UserId)

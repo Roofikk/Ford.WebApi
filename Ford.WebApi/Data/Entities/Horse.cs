@@ -5,15 +5,10 @@ namespace Ford.WebApi.Data.Entities;
 
 public class Horse
 {
-    public Horse()
-    {
-        Saves = new HashSet<Save>();
-        Users = new HashSet<UserHorse>();
-    }
-
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public long HorseId { get; set; }
+    public long? LastModifiedByUserId { get; set; }
     [Column(TypeName = "varchar(64)")]
     public string Name { get; set; } = null!;
     [Column(TypeName = "TEXT")]
@@ -28,14 +23,14 @@ public class Horse
     [Column(TypeName = "nvarchar(32)")]
     public string? Country { get; set; }
     public DateTime CreationDate { get; set; }
-    public DateTime LastUpdate { get; set; }
+    public DateTime LastModified { get; set; }
     [Column(TypeName = "varchar(32)")]
     public string? OwnerName { get; set; }
     [Column(TypeName = "varchar(32)")]
     public string? OwnerPhoneNumber { get; set; }
 
-
-    public virtual ICollection<Save> Saves { get; }
-
-    public virtual ICollection<UserHorse> Users { get; }
+    public virtual User? LastModifiedByUser { get; set; }
+    public virtual ICollection<Save> Saves { get; } = [];
+    public virtual ICollection<HorseUser> HorseUsers { get; } = [];
+    public virtual ICollection<User> Users { get; } = [];
 }

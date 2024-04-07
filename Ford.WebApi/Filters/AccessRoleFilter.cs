@@ -24,7 +24,7 @@ namespace Ford.WebApi.Filters
         {
             var user = (User)context.HttpContext.Items["user"]!;
 
-            UserHorse? horseUser = null;
+            HorseUser? horseUser = null;
             
             if (context.ActionArguments.TryGetValue("requestSave", out var value))
             {
@@ -54,6 +54,12 @@ namespace Ford.WebApi.Filters
             {
                 var requestHorse = value as HorseUpdatingDto;
                 horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == requestHorse!.HorseId);
+            }
+
+            if (context.ActionArguments.TryGetValue("horseId", out value))
+            {
+                var horseId = Convert.ToInt64(value);
+                horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == horseId);
             }
 
             if (horseUser == null)

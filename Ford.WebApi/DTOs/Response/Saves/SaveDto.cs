@@ -9,8 +9,6 @@ public class SaveDto : IResponseSave
     public string Header { get; set; } = null!;
     public string? Description { get; set; }
     public DateOnly Date { get; set; }
-    public DateTime CreationDate { get; set; }
-    public DateTime LastUpdate { get; set; }
-    public HorseUserDto CreatedByUser { get; set; } = null!;
-    public HorseUserDto LastUpdatedUser { get; set; } = null!;
+    public UserDateDto CreatedBy { get; set; } = null!;
+    public UserDateDto LastModifiedBy { get; set; } = null!;
 }

@@ -4,6 +4,7 @@ using Ford.WebApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Ford.WebApi.Migrations
 {
     [DbContext(typeof(FordContext))]
-    partial class FordContextModelSnapshot : ModelSnapshot
+    [Migration("20240406185830_AddUserLastModifiedFields")]
+    partial class AddUserLastModifiedFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -45,11 +48,11 @@ namespace Ford.WebApi.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("LastModified")
-                        .HasColumnType("datetime2");
-
                     b.Property<long?>("LastModifiedByUserId")
                         .HasColumnType("bigint");
+
+                    b.Property<DateTime>("LastUpdate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -94,9 +97,6 @@ namespace Ford.WebApi.Migrations
 
                     b.HasKey("HorseId", "UserId");
 
-                    b.HasIndex("AccessRole")
-                        .HasDatabaseName("IX_HorseUserAccessRoles");
-
                     b.HasIndex("UserId");
 
                     b.ToTable("HorseUsers");
@@ -129,10 +129,10 @@ namespace Ford.WebApi.Migrations
                     b.Property<long>("HorseId")
                         .HasColumnType("bigint");
 
-                    b.Property<DateTime>("LastModified")
+                    b.Property<DateTime>("LastUpdate")
                         .HasColumnType("datetime2");
 
-                    b.Property<long?>("LastModifiedByUserId")
+                    b.Property<long?>("LastUpdatedByUserId")
                         .HasColumnType("bigint");
 
                     b.HasKey("SaveId");
@@ -141,7 +141,7 @@ namespace Ford.WebApi.Migrations
 
                     b.HasIndex("HorseId");
 
-                    b.HasIndex("LastModifiedByUserId");
+                    b.HasIndex("LastUpdatedByUserId");
 
                     b.ToTable("Saves");
                 });
@@ -475,7 +475,7 @@ namespace Ford.WebApi.Migrations
 
                     b.HasOne("Ford.WebApi.Data.Entities.User", "LastUpdatedByUser")
                         .WithMany()
-                        .HasForeignKey("LastModifiedByUserId");
+                        .HasForeignKey("LastUpdatedByUserId");
 
                     b.Navigation("CreatedByUser");
 

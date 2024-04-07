@@ -29,7 +29,7 @@ public class HorsesController : ControllerBase
     }
 
     [HttpGet()]
-    [ProducesResponseType(typeof(RetrieveArray<HorseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ICollection<HorseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HorseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAsync(long? horseId, int below = 0, int amount = 20,
@@ -41,9 +41,9 @@ public class HorsesController : ControllerBase
         {
             var horses = await _horseRepository.GetAsync(_user.Id, below, amount, orderByDate, orderByName);
 
-            if (!horses.Any())
+            if (horses.Count == 0)
             {
-                return Ok(new RetrieveArray<HorseDto>());
+                return Ok(new List<HorseDto>());
             }
             else
             {
@@ -60,7 +60,7 @@ public class HorsesController : ControllerBase
                     Request.GetDisplayUrl(),
                     "NotFound",
                     HttpStatusCode.Unauthorized,
-                    new List<Error> { new("Horse not found", "Horse not exists") }));
+                    [new("Horse not found", "Horse not exists")]));
             }
 
             return Ok(horse);
@@ -321,7 +321,7 @@ public class HorsesController : ControllerBase
     [ProducesResponseType(typeof(HorseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Writer])]
     public async Task<ActionResult<HorseDto>> UpdateAsync([FromBody] HorseUpdatingDto requestHorse)
     {
         _user ??= (User)HttpContext.Items["user"]!;
@@ -341,10 +341,10 @@ public class HorsesController : ControllerBase
     }
 
     [HttpDelete]
-    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Read])]
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Writer])]
     public async Task<IActionResult> DeleteAsync(long horseId)
     {
-        var horseUser = (UserHorse)HttpContext.Items["horseUser"]!;
+        var horseUser = (HorseUser)HttpContext.Items["horseUser"]!;
         var deletingResult = await _horseRepository.DeleteAsync(horseId, horseUser.UserId);
 
         if (!deletingResult)

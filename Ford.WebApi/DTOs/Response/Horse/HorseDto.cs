@@ -12,11 +12,11 @@ public class HorseDto : IStorageData
     public string? City { get; set; }
     public string? Region { get; set; }
     public string? Country { get; set; }
-    public DateTime CreationDate { get; set; }
-    public DateTime LastUpdate { get; set; }
     public string? OwnerName { get; set; }
     public string? OwnerPhoneNumber { get; set; }
     public HorseUserDto Self { get; set; } = null!;
+    public UserDateDto CreatedBy { get; set; } = null!;
+    public UserDateDto LastModifiedBy { get; set; } = null!;
     public ICollection<HorseUserDto> Users { get; set; } = [];
     public ICollection<SaveDto> Saves { get; set; } = [];
 }

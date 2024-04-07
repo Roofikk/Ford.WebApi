@@ -20,8 +20,8 @@ public class SaveRepository : ISaveRepository
     public async Task<ICollection<SaveDto>> GetAsync(long horseId, long userId, int below = 0, int amount = 20)
     {
         List<SaveDto> savesDto = [];
-        var saves = _context.Saves.Where(s => s.HorseId == horseId && s.Horse.Users.Any(o => o.UserId == userId))
-            .OrderBy(o => o.LastUpdate)
+        var saves = _context.Saves.Where(s => s.HorseId == horseId && s.Horse.HorseUsers.Any(o => o.UserId == userId))
+            .OrderBy(o => o.LastModified)
             .Skip(below)
             .Take(amount);
 
@@ -65,9 +65,9 @@ public class SaveRepository : ISaveRepository
                 Description = saveDto.Description,
                 Date = saveDto.Date,
                 CreationDate = DateTime.UtcNow,
-                LastUpdate = DateTime.UtcNow,
+                LastModified = DateTime.UtcNow,
                 CreatedByUserId = userId,
-                LastUpdatedByUserId = userId,
+                LastModifiedByUserId = userId,
             };
 
             foreach (var bone in saveDto.Bones)
@@ -151,7 +151,7 @@ public class SaveRepository : ISaveRepository
             };
         }
 
-        if (Enum.Parse<UserAccessRole>(user.AccessRole) < UserAccessRole.Write)
+        if (Enum.Parse<UserAccessRole>(user.AccessRole) < UserAccessRole.Writer)
         {
             return new ServiceResult<Save>()
             {
@@ -167,9 +167,9 @@ public class SaveRepository : ISaveRepository
             Description = requestSave.Description,
             Date = requestSave.Date,
             CreationDate = DateTime.UtcNow,
-            LastUpdate = DateTime.UtcNow,
+            LastModified = DateTime.UtcNow,
             CreatedByUserId = userId,
-            LastUpdatedByUserId = userId,
+            LastModifiedByUserId = userId,
         };
 
         foreach (var bone in requestSave.Bones)
@@ -225,9 +225,9 @@ public class SaveRepository : ISaveRepository
         }
 
         await _context.Entry(save).Reference(s => s.Horse).LoadAsync();
-        await _context.Entry(save).Collection(s => s.Horse.Users).LoadAsync();
+        await _context.Entry(save.Horse).Collection(x => x.HorseUsers).LoadAsync();
 
-        var currentUser = save.Horse.Users.SingleOrDefault(u => u.UserId == userId);
+        var currentUser = save.Horse.HorseUsers.SingleOrDefault(u => u.UserId == userId);
 
         if (currentUser == null)
         {
@@ -238,7 +238,7 @@ public class SaveRepository : ISaveRepository
             };
         }
 
-        if (Enum.Parse<UserAccessRole>(currentUser.AccessRole) < UserAccessRole.Write)
+        if (Enum.Parse<UserAccessRole>(currentUser.AccessRole) < UserAccessRole.Writer)
         {
             return new ServiceResult<SaveDto>()
             {
@@ -250,8 +250,8 @@ public class SaveRepository : ISaveRepository
         save.Header = requestSave.Header;
         save.Description = requestSave.Description;
         save.Date = requestSave.Date;
-        save.LastUpdate = DateTime.UtcNow;
-        save.LastUpdatedByUserId = userId;
+        save.LastModified = DateTime.UtcNow;
+        save.LastModifiedByUserId = userId;
 
         _context.Entry(save).State = EntityState.Modified;
         var saveDto = await MapSave(save);
@@ -272,16 +272,16 @@ public class SaveRepository : ISaveRepository
         }
 
         await _context.Entry(save).Reference(s => s.Horse).LoadAsync();
-        await _context.Entry(save).Collection(s => s.Horse.Users).LoadAsync();
+        await _context.Entry(save.Horse).Collection(x => x.HorseUsers).LoadAsync();
 
-        var currentUser = save.Horse.Users.SingleOrDefault(u => u.UserId == userId);
+        var currentUser = save.Horse.HorseUsers.SingleOrDefault(u => u.UserId == userId);
 
         if (currentUser == null)
         {
             return false;
         }
 
-        if (Enum.Parse<UserAccessRole>(currentUser.AccessRole) < UserAccessRole.Write)
+        if (Enum.Parse<UserAccessRole>(currentUser.AccessRole) < UserAccessRole.Writer)
         {
             return false;
         }
@@ -297,11 +297,6 @@ public class SaveRepository : ISaveRepository
 
     private async Task<FullSaveDto> MapSave(Save save)
     {
-        if (save.CreatedByUser == null)
-        {
-            await _context.Entry(save).Reference(s => s.CreatedByUser).LoadAsync();
-        }
-
         FullSaveDto responseSaveDto = new()
         {
             HorseId = save.HorseId,
@@ -309,29 +304,38 @@ public class SaveRepository : ISaveRepository
             Header = save.Header,
             Description = save.Description,
             Date = save.Date,
-            LastUpdate = save.LastUpdate,
-            CreationDate = save.CreationDate,
         };
+
+        responseSaveDto.CreatedBy = new()
+        {
+            Date = save.CreationDate,
+        };
+
+        responseSaveDto.LastModifiedBy = new()
+        {
+            Date = save.LastModified
+        };
+
+        if (save.CreatedByUser == null)
+        {
+            await _context.Entry(save).Reference(s => s.CreatedByUser).LoadAsync();
+        }
 
         if (save.CreatedByUser != null)
         {
-            await _context.Entry(save.CreatedByUser).Collection(c => c.HorseOwners).LoadAsync();
-            var createdByHorseUser = save.CreatedByUser.HorseOwners
+            await _context.Entry(save.CreatedByUser).Collection(c => c.HorseUsers).LoadAsync();
+            var createdByHorseUser = save.CreatedByUser.HorseUsers
                 .SingleOrDefault(s => s.UserId == save.CreatedByUserId && s.HorseId == save.HorseId);
 
-            responseSaveDto.CreatedByUser = new()
+            responseSaveDto.CreatedBy.User = new()
             {
                 UserId = save.CreatedByUser.Id,
                 FirstName = save.CreatedByUser.FirstName,
                 LastName = save.CreatedByUser.LastName,
-                PhoneNumber = save.CreatedByUser.PhoneNumber
+                PhoneNumber = save.CreatedByUser.PhoneNumber,
+                AccessRole = createdByHorseUser?.AccessRole.ToString() ?? "None",
+                IsOwner = createdByHorseUser?.IsOwner ?? false,
             };
-
-            if (createdByHorseUser != null)
-            {
-                responseSaveDto.CreatedByUser.AccessRole = createdByHorseUser.AccessRole;
-                responseSaveDto.CreatedByUser.IsOwner = createdByHorseUser.IsOwner;
-            }
         }
 
         if (save.LastUpdatedByUser == null)
@@ -341,23 +345,19 @@ public class SaveRepository : ISaveRepository
 
         if (save.LastUpdatedByUser != null)
         {
-            await _context.Entry(save.LastUpdatedByUser).Collection(c => c.HorseOwners).LoadAsync();
-            var lastUpdatedByHorseUser = save.LastUpdatedByUser.HorseOwners
-                .SingleOrDefault(s => s.UserId == save.LastUpdatedByUserId && s.HorseId == save.HorseId);
+            await _context.Entry(save.LastUpdatedByUser).Collection(c => c.HorseUsers).LoadAsync();
+            var lastUpdatedByHorseUser = save.LastUpdatedByUser.HorseUsers
+                .SingleOrDefault(s => s.UserId == save.LastModifiedByUserId && s.HorseId == save.HorseId);
 
-            responseSaveDto.LastUpdatedUser = new()
+            responseSaveDto.LastModifiedBy.User = new()
             {
                 UserId = save.LastUpdatedByUser.Id,
                 FirstName = save.LastUpdatedByUser.FirstName,
                 LastName = save.LastUpdatedByUser.LastName,
-                PhoneNumber = save.LastUpdatedByUser.PhoneNumber
+                PhoneNumber = save.LastUpdatedByUser.PhoneNumber,
+                AccessRole = lastUpdatedByHorseUser?.AccessRole.ToString() ?? "None",
+                IsOwner = lastUpdatedByHorseUser?.IsOwner ?? false,
             };
-
-            if (lastUpdatedByHorseUser != null)
-            {
-                responseSaveDto.LastUpdatedUser.AccessRole = lastUpdatedByHorseUser.AccessRole;
-                responseSaveDto.LastUpdatedUser.IsOwner = lastUpdatedByHorseUser.IsOwner;
-            }
         }
 
         foreach (var bone in save.SaveBones)

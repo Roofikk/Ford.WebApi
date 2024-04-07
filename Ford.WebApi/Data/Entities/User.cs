@@ -36,7 +36,6 @@ public class User : IdentityUser<long>
     public DateTime RefreshTokenExpiresDate { get; set; }
 
     [InverseProperty("User")]
-    public ICollection<UserHorse> HorseOwners { get; } = [];
-    public ICollection<Save> CreatedSaves { get; } = [];
-    public ICollection<Save> UpdatedSaves { get; } = [];
+    public ICollection<HorseUser> HorseUsers { get; } = [];
+    public ICollection<Horse> Horses { get; } = [];
 }

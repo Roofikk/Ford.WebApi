@@ -48,7 +48,7 @@ public class SavesController : ControllerBase
     // POST api/<SavesController>/{horseId}
     // Create
     [HttpPost()]
-    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Writer])]
     public async Task<ActionResult<SaveDto>> Create([FromBody] SaveCreatingDto requestSave)
     {
         // get authorize user
@@ -67,7 +67,7 @@ public class SavesController : ControllerBase
     // PUT api/<SavesController>/5
     // Update
     [HttpPut()]
-    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Writer])]
     public async Task<ActionResult<SaveDto>> Update([FromBody] RequestUpdateSaveDto requestSave)
     {
         _user ??= (User)HttpContext.Items["user"]!;
@@ -85,7 +85,7 @@ public class SavesController : ControllerBase
 
     // DELETE api/[controller]?saveId=5
     [HttpDelete()]
-    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Writer])]
     public async Task<IActionResult> Delete([Required] long saveId)
     {
         _user ??= (User)HttpContext.Items["user"]!;

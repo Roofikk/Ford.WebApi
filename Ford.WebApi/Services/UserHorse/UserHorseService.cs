@@ -4,7 +4,6 @@ using Ford.WebApi.Dtos.Horse;
 using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Models.Horse;
 using Microsoft.EntityFrameworkCore;
-using System.Net;
 
 namespace Ford.WebApi.Services;
 
@@ -23,7 +22,7 @@ public class UserHorseService : IUserHorseRepository
         return await MapHorseUsers(users.ToList());
     }
 
-    public ServiceResult<ICollection<UserHorse>> Create(User user, long horseId, ICollection<RequestHorseUser> requestHorseUsers)
+    public ServiceResult<ICollection<HorseUser>> Create(User user, long horseId, ICollection<RequestHorseUser> requestHorseUsers)
     {
         //Find exist user in DB
         IEnumerable<User> containsUsers = _context.Users
@@ -37,14 +36,14 @@ public class UserHorseService : IUserHorseRepository
 
         if (secondCreator != null)
         {
-            return new ServiceResult<ICollection<UserHorse>>
+            return new ServiceResult<ICollection<HorseUser>>
             {
                 Success = false,
                 ErrorMessage = "You cannot add user with creator access"
             };
         }
 
-        List<UserHorse> users = new();
+        List<HorseUser> users = new();
 
         if (containsUsers.Count() == requestHorseUsers.Count())
         {
@@ -66,7 +65,7 @@ public class UserHorseService : IUserHorseRepository
 
                 if (!Enum.TryParse(reqUser.AccessRole, true, out UserAccessRole role))
                 {
-                    return new ServiceResult<ICollection<UserHorse>>
+                    return new ServiceResult<ICollection<HorseUser>>
                     {
                         Success = false,
                         ErrorMessage = "Invalid Role",
@@ -84,7 +83,7 @@ public class UserHorseService : IUserHorseRepository
         }
         else
         {
-            return new ServiceResult<ICollection<UserHorse>>
+            return new ServiceResult<ICollection<HorseUser>>
             {
                 Success = false,
                 ErrorMessage = "Some users not found",
@@ -103,14 +102,14 @@ public class UserHorseService : IUserHorseRepository
             });
         }
 
-        return new ServiceResult<ICollection<UserHorse>>
+        return new ServiceResult<ICollection<HorseUser>>
         {
             Success = true,
             Result = users
         };
     }
 
-    public ServiceResult<ICollection<UserHorse>> Create(User user, Horse horse, ICollection<RequestHorseUser> requestHorseUsers)
+    public ServiceResult<ICollection<HorseUser>> Create(User user, Horse horse, ICollection<RequestHorseUser> requestHorseUsers)
     {
         //Find exist user in DB
         IEnumerable<User> containsUsers = _context.Users
@@ -124,14 +123,14 @@ public class UserHorseService : IUserHorseRepository
 
         if (secondCreator != null)
         {
-            return new ServiceResult<ICollection<UserHorse>>
+            return new ServiceResult<ICollection<HorseUser>>
             {
                 Success = false,
                 ErrorMessage = "You cannot add user with creator access"
             };
         }
 
-        List<UserHorse> users = new();
+        List<HorseUser> users = new();
 
         if (containsUsers.Count() == requestHorseUsers.Count())
         {
@@ -153,7 +152,7 @@ public class UserHorseService : IUserHorseRepository
 
                 if (!Enum.TryParse(reqUser.AccessRole, true, out UserAccessRole role))
                 {
-                    return new ServiceResult<ICollection<UserHorse>>
+                    return new ServiceResult<ICollection<HorseUser>>
                     {
                         Success = false,
                         ErrorMessage = "Invalid Role",
@@ -171,7 +170,7 @@ public class UserHorseService : IUserHorseRepository
         }
         else
         {
-            return new ServiceResult<ICollection<UserHorse>>
+            return new ServiceResult<ICollection<HorseUser>>
             {
                 Success = false,
                 ErrorMessage = "Some users not found",
@@ -192,7 +191,7 @@ public class UserHorseService : IUserHorseRepository
 
         _context.AddRange(users);
 
-        return new ServiceResult<ICollection<UserHorse>>
+        return new ServiceResult<ICollection<HorseUser>>
         {
             Success = true,
             Result = users
@@ -298,18 +297,16 @@ public class UserHorseService : IUserHorseRepository
     //    };
     //}
 
-    public async Task<ServiceResult<ICollection<UserHorse>>> UpdateAsync(long currentUserId, long horseId, ICollection<RequestHorseUser> requestUsers)
+    public async Task<ServiceResult<ICollection<HorseUser>>> UpdateAsync(long currentUserId, long horseId, ICollection<RequestHorseUser> requestUsers)
     {
-        //_context.Entry(horse).State = EntityState.Modified;
         var users = _context.HorseUsers.Where(x => x.HorseId == horseId);
-        // await _context.Entry(horse).Collection(h => h.Users).LoadAsync();
         var horseUser = users.SingleOrDefault(u => u.UserId == currentUserId);
-        var creator = users.SingleOrDefault(u => Enum.Parse<UserAccessRole>(u.AccessRole) == UserAccessRole.Creator);
+        var creator = users.SingleOrDefault(u => u.AccessRole == UserAccessRole.Creator.ToString());
 
         // check access to action
         if (Enum.Parse<UserAccessRole>(horseUser!.AccessRole) < UserAccessRole.All)
         {
-            return new ServiceResult<ICollection<UserHorse>>
+            return new ServiceResult<ICollection<HorseUser>>
             {
                 Success = false,
                 ErrorMessage = "You don't have permission for update or add users",
@@ -330,7 +327,7 @@ public class UserHorseService : IUserHorseRepository
         }
 
         // select users for delete
-        var usersForDeleting = users.Where(u => !requestUsers.Any(x => x.UserId == u.UserId));
+        var usersForDeleting = users.ToList().Where(u => !requestUsers.Any(x => x.UserId == u.UserId));
 
         foreach (var userDelete in usersForDeleting)
         {
@@ -338,7 +335,7 @@ public class UserHorseService : IUserHorseRepository
         }
 
         // select users for add
-        var usersForAdding = requestUsers.Where(u => !users.Any(x => x.UserId == u.UserId));
+        var usersForAdding = requestUsers.Where(u => !users.ToList().Any(x => x.UserId == u.UserId));
 
         foreach (var addingUser in usersForAdding)
         {
@@ -352,10 +349,7 @@ public class UserHorseService : IUserHorseRepository
         }
 
         // select users for update
-        var userForChanging = requestUsers.Where(u => !users.Any(x =>
-            x.UserId == u.UserId &&
-            x.IsOwner == u.IsOwner &&
-            x.AccessRole == u.AccessRole));
+        var userForChanging = requestUsers.Where(x => !usersForAdding.Any(u => u.UserId == x.UserId));
 
         foreach (var changeUser in userForChanging)
         {
@@ -371,7 +365,7 @@ public class UserHorseService : IUserHorseRepository
 
         if (owners.Count() > 1)
         {
-            return new ServiceResult<ICollection<UserHorse>>
+            return new ServiceResult<ICollection<HorseUser>>
             {
                 Success = false,
                 ErrorMessage = "Cannot be more than one owner"
@@ -379,7 +373,7 @@ public class UserHorseService : IUserHorseRepository
         }
 
         // check one or more creators
-        var someCreators = users.Where(u => Enum.Parse<UserAccessRole>(u.AccessRole) == UserAccessRole.Creator);
+        var someCreators = users.ToList().Where(u => u.AccessRole == UserAccessRole.Creator.ToString());
 
         if (someCreators.Count() > 1)
         {
@@ -393,34 +387,32 @@ public class UserHorseService : IUserHorseRepository
         }
 
         // check removing creator
-        if (!someCreators.Any())
+        if (creator!.AccessRole != UserAccessRole.Creator.ToString())
         {
             creator!.AccessRole = UserAccessRole.Creator.ToString();
         }
 
         if (_context.Entry(creator!).State == EntityState.Deleted)
         {
+            _context.Entry(creator!).State = EntityState.Modified;
             creator!.IsOwner = false;
         }
 
-        _context.Entry(creator!).State = EntityState.Modified;
-        //await _context.SaveChangesAsync();
-
-        return new ServiceResult<ICollection<UserHorse>>
+        return new ServiceResult<ICollection<HorseUser>>
         {
             Success = true,
-            Result = await users.Where(x => _context.Entry(x).State != EntityState.Deleted).ToListAsync()
+            Result = _context.HorseUsers.Local.Where(x => x.HorseId == horseId && _context.Entry(x).State != EntityState.Deleted).ToList()
         };
     }
 
-    public async Task<ServiceResult<ICollection<UserHorse>>> AddAsync(long currentUserId, long horseId, RequestHorseUser requestHorseUser)
+    public async Task<ServiceResult<ICollection<HorseUser>>> AddAsync(long currentUserId, long horseId, RequestHorseUser requestHorseUser)
     {
         var users = _context.HorseUsers.Where(u => u.HorseId == horseId);
         var horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == currentUserId && u.HorseId == horseId);
 
         if (Enum.Parse<UserAccessRole>(horseUser!.AccessRole) < UserAccessRole.All)
         {
-            return new ServiceResult<ICollection<UserHorse>>
+            return new ServiceResult<ICollection<HorseUser>>
             {
                 Success = false,
                 ErrorMessage = "You don't have permission for update or add users",
@@ -431,7 +423,7 @@ public class UserHorseService : IUserHorseRepository
 
         if (existUser != null)
         {
-            return new ServiceResult<ICollection<UserHorse>>
+            return new ServiceResult<ICollection<HorseUser>>
             {
                 Success = false,
                 ErrorMessage = "User is already exists"
@@ -451,7 +443,7 @@ public class UserHorseService : IUserHorseRepository
 
         if (owners.Count() > 1)
         {
-            return new ServiceResult<ICollection<UserHorse>>
+            return new ServiceResult<ICollection<HorseUser>>
             {
                 Success = false,
                 ErrorMessage = "Cannot be more than one owner"
@@ -461,7 +453,7 @@ public class UserHorseService : IUserHorseRepository
         // check exist yourself
         if (!users.Contains(horseUser))
         {
-            return new ServiceResult<ICollection<UserHorse>>
+            return new ServiceResult<ICollection<HorseUser>>
             {
                 Success = false,
                 ErrorMessage = "You cannot remove yourself"
@@ -469,7 +461,7 @@ public class UserHorseService : IUserHorseRepository
         }
 
         // await _context.SaveChangesAsync();
-        return new ServiceResult<ICollection<UserHorse>>
+        return new ServiceResult<ICollection<HorseUser>>
         {
             Success = true,
             Result = [.. await users.AsNoTracking().ToListAsync()]
@@ -532,7 +524,7 @@ public class UserHorseService : IUserHorseRepository
         return await _context.SaveChangesAsync();
     }
 
-    private async Task<ICollection<HorseUserDto>> MapHorseUsers(ICollection<UserHorse> users)
+    private async Task<ICollection<HorseUserDto>> MapHorseUsers(ICollection<HorseUser> users)
     {
         List<HorseUserDto> usersDto = [];
 
