@@ -8,6 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="DTOs\Request\HorseOwner\**" />
+    <Content Remove="DTOs\Request\HorseOwner\**" />
+    <EmbeddedResource Remove="DTOs\Request\HorseOwner\**" />
+    <None Remove="DTOs\Request\HorseOwner\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="EntityFramework" Version="6.4.4" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="8.0.3" />
@@ -30,10 +37,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="DTOs\Request\HorseOwner\" />
   </ItemGroup>
 
 </Project>

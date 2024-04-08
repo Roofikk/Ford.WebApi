@@ -226,7 +226,7 @@ public class HorsesController : ControllerBase
                                     {
                                         var save = saveAction.Data as FullSaveDto ??
                                             throw new ArgumentException("SaveAction is not SaveCreatingDto");
-                                        var updatingSave = new RequestUpdateSaveDto()
+                                        var updatingSave = new SaveUpdatingDto()
                                         {
                                             SaveId = save.SaveId,
                                             Header = save.Header,

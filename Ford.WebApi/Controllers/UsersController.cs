@@ -25,8 +25,8 @@ public class UsersController : ControllerBase
 
     [HttpGet()]
     [Authorize]
-    [ProducesResponseType(typeof(IEnumerable<UserGettingDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(long? userId)
     {
@@ -120,9 +120,9 @@ public class UsersController : ControllerBase
         }
     }
 
-    private UserGettingDto MapUser(User user)
+    private UserDto MapUser(User user)
     {
-        var userDto = new UserGettingDto()
+        var userDto = new UserDto()
         {
             UserId = user.Id,
             UserName = user.UserName!,

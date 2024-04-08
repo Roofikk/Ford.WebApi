@@ -68,7 +68,7 @@ public class SavesController : ControllerBase
     // Update
     [HttpPut()]
     [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Writer])]
-    public async Task<ActionResult<SaveDto>> Update([FromBody] RequestUpdateSaveDto requestSave)
+    public async Task<ActionResult<SaveDto>> Update([FromBody] SaveUpdatingDto requestSave)
     {
         _user ??= (User)HttpContext.Items["user"]!;
 

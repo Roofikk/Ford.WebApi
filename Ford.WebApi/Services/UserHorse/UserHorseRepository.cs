@@ -7,11 +7,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ford.WebApi.Services;
 
-public class UserHorseService : IUserHorseRepository
+public class UserHorseRepository : IUserHorseRepository
 {
     private readonly FordContext _context;
 
-    public UserHorseService(FordContext context)
+    public UserHorseRepository(FordContext context)
     {
         _context = context;
     }

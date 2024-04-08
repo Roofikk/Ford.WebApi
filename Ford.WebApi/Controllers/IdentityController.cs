@@ -33,9 +33,9 @@ public class IdentityController : ControllerBase
 
     [HttpPost]
     [Route("sign-up")]
-    [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<UserGettingDto>> SignUp([FromBody] UserRegister request)
+    public async Task<ActionResult<UserDto>> SignUp([FromBody] UserRegister request)
     {
         // надо разобраться, как вообще работает ModelState и как он может быть невалидным
         if (!ModelState.IsValid)
@@ -88,7 +88,7 @@ public class IdentityController : ControllerBase
 
         await userManager.AddToRoleAsync(findUser, Roles.Member);
 
-        UserGettingDto userDto = new()
+        UserDto userDto = new()
         {
             UserId = user.Id,
             UserName = user.UserName!,
@@ -186,9 +186,9 @@ public class IdentityController : ControllerBase
 
     [HttpGet, Authorize]
     [Route("account")]
-    [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<UserGettingDto>> GetUserInfo()
+    public async Task<ActionResult<UserDto>> GetUserInfo()
     {
         var user = await userManager.GetUserAsync(User);
 
@@ -201,7 +201,7 @@ public class IdentityController : ControllerBase
                 [new("User's token", "Token is invalid")]));
         }
 
-        UserGettingDto userDto = new()
+        UserDto userDto = new()
         {
             UserId = user.Id,
             UserName = user.UserName!,
@@ -221,10 +221,10 @@ public class IdentityController : ControllerBase
 
     [HttpPost, Authorize]
     [Route("account")]
-    [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<UserGettingDto>> Update([FromBody] UpdateUserRequest request)
+    public async Task<ActionResult<UserDto>> Update([FromBody] UpdateUserRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -257,7 +257,7 @@ public class IdentityController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        UserGettingDto userDto = new()
+        UserDto userDto = new()
         {
             UserId = user.Id,
             UserName = user.UserName!,

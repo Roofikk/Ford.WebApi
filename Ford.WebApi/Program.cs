@@ -113,7 +113,7 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ISaveRepository, SaveRepository>();
 builder.Services.AddScoped<IHorseRepository, HorseRepository>();
-builder.Services.AddScoped<IUserHorseRepository, UserHorseService>();
+builder.Services.AddScoped<IUserHorseRepository, UserHorseRepository>();
 
 builder.Services.AddOptions<JwtSettings>()
     .Bind(builder.Configuration.GetSection("Jwt"))

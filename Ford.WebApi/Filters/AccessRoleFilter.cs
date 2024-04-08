@@ -36,7 +36,7 @@ namespace Ford.WebApi.Filters
                         horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == requestCreateSaveDto.HorseId);
                         break;
 
-                    case RequestUpdateSaveDto requestUpdateSaveDto:
+                    case SaveUpdatingDto requestUpdateSaveDto:
                         var save = await _context.Saves.SingleOrDefaultAsync(s => s.SaveId == requestUpdateSaveDto.SaveId);
                         horseUser = await _context.HorseUsers.SingleOrDefaultAsync(u => u.UserId == user.Id && u.HorseId == save!.HorseId);
                         break;
