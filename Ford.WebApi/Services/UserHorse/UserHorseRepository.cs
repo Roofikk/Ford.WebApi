@@ -45,7 +45,7 @@ public class UserHorseRepository : IUserHorseRepository
 
         List<HorseUser> users = new();
 
-        if (containsUsers.Count() == requestHorseUsers.Count())
+        if (containsUsers.Count() == requestHorseUsers.Count)
         {
             foreach (var reqUser in requestHorseUsers)
             {
@@ -132,7 +132,7 @@ public class UserHorseRepository : IUserHorseRepository
 
         List<HorseUser> users = new();
 
-        if (containsUsers.Count() == requestHorseUsers.Count())
+        if (containsUsers.Count() == requestHorseUsers.Count)
         {
             foreach (var reqUser in requestHorseUsers)
             {

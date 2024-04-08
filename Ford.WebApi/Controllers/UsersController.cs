@@ -20,7 +20,7 @@ public class UsersController : ControllerBase
     public UsersController(FordContext context, UserManager<User> userManager)
     {
         _context = context;
-        this._userManager = userManager;
+        _userManager = userManager;
     }
 
     [HttpGet()]
