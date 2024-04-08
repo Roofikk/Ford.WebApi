@@ -10,7 +10,7 @@ public static class FordContextExtensions
         string databasePath = Path.Combine(relativePath, "Ford.db");
         services.AddDbContext<FordContext>(options =>
             {
-                options.UseSqlite($"Data Source={databasePath}");
+                options.UseSqlServer();
             }
         );
 

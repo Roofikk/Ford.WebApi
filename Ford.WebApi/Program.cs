@@ -7,17 +7,27 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Data;
-using Ford.WebApi.Extensions;
 using Ford.WebApi.Services.Identity;
 using Ford.WebApi.Extensions.Authentication;
 using Ford.WebApi.Services;
 using Ford.WebApi.Filters;
+using Microsoft.EntityFrameworkCore;
+using Ford.WebApi.Services.HorseService;
+using Ford.WebApi.JsonConverters;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
-builder.Services.AddFordContext();
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(opts =>
+    {
+        opts.SerializerSettings.Converters.Add(new StorageDataConverter());
+    });
+
+builder.Services.AddDbContext<FordContext>(opts =>
+{
+    opts.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
 builder.Services.AddAuthentication(options =>
 {
@@ -102,6 +112,7 @@ builder.Services.AddScoped<UserFilter>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ISaveRepository, SaveRepository>();
+builder.Services.AddScoped<IHorseRepository, HorseRepository>();
 builder.Services.AddScoped<IUserHorseRepository, UserHorseService>();
 
 builder.Services.AddOptions<JwtSettings>()
@@ -113,11 +124,9 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
 }
-
-app.UseHttpsRedirection();
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseAuthentication();
 app.UseAuthorization();

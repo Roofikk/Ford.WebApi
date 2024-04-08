@@ -1,9 +1,7 @@
-﻿using Ford.WebApi.Data;
-using Ford.WebApi.Data.Entities;
+﻿using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Ford.WebApi.Dtos.Request;
 using System.ComponentModel.DataAnnotations;
 using Ford.WebApi.Services;
@@ -17,20 +15,18 @@ namespace Ford.WebApi.Controllers;
 [ServiceFilter(typeof(UserFilter))]
 public class SavesController : ControllerBase
 {
-    private readonly FordContext db;
     private readonly ISaveRepository _saveService;
     private User? _user;
 
-    public SavesController(FordContext db, ISaveRepository saveRepository)
+    public SavesController(ISaveRepository saveRepository)
     {
-        this.db = db;
         _saveService = saveRepository;
     }
 
     // GET: api/<SavesController>/{horseId}
     [HttpGet()]
-    [ProducesResponseType(typeof(ResponseFullSave), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(IEnumerable<ResponseSaveDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FullSaveDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<SaveDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Get([Required] long horseId, long? saveId, int below = 0, int amount = 20)
@@ -52,61 +48,52 @@ public class SavesController : ControllerBase
     // POST api/<SavesController>/{horseId}
     // Create
     [HttpPost()]
-    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
-    public async Task<ActionResult<ResponseSaveDto>> Create([FromBody] RequestCreateSaveDto requestSave)
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Writer])]
+    public async Task<ActionResult<SaveDto>> Create([FromBody] SaveCreatingDto requestSave)
     {
         // get authorize user
         _user ??= (User)HttpContext.Items["user"]!;
-        var saveDto = await _saveService.CreateAsync(requestSave, _user.Id);
+        var result = await _saveService.CreateToExistHorseAsync(requestSave, _user.Id);
 
-        if (saveDto == null)
+        if (!result.Success)
         {
             return BadRequest();
         }
 
-        return Created($"api/[controller]?horseId={requestSave.HorseId}&saveId={saveDto.SaveId}", saveDto);
+        await _saveService.SaveChangesAsync();
+        return Created($"api/[controller]?horseId={requestSave.HorseId}&saveId={result.Result!.SaveId}", result.Result);
     }
 
     // PUT api/<SavesController>/5
     // Update
     [HttpPut()]
-    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
-    public async Task<ActionResult<ResponseSaveDto>> Update([FromBody] RequestUpdateSaveDto requestSave)
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Writer])]
+    public async Task<ActionResult<SaveDto>> Update([FromBody] RequestUpdateSaveDto requestSave)
     {
         _user ??= (User)HttpContext.Items["user"]!;
 
-        Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == requestSave.SaveId);
+        var result = await _saveService.UpdateAsync(requestSave, _user.Id);
 
-        if (save is null)
-        {
-            return NotFound();
-        }
-
-        var saveDto = await _saveService.UpdateAsync(requestSave, save, _user.Id);
-
-        if (saveDto == null)
+        if (!result.Success)
         {
             return BadRequest();
         }
 
-        return saveDto;
+        await _saveService.SaveChangesAsync();
+        return result.Result!;
     }
 
     // DELETE api/[controller]?saveId=5
     [HttpDelete()]
-    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Write])]
+    [TypeFilter(typeof(AccessRoleFilter), Arguments = [UserAccessRole.Writer])]
     public async Task<IActionResult> Delete([Required] long saveId)
     {
-        Save? save = await db.Saves.SingleOrDefaultAsync(s => s.SaveId == saveId);
+        _user ??= (User)HttpContext.Items["user"]!;
 
-        if (save is null)
-        {
-            return NotFound();
-        }
-
-        var result = await _saveService.DeleteAsync(save);
+        var result = await _saveService.DeleteAsync(saveId, _user.Id);
         if (result)
         {
+            await _saveService.SaveChangesAsync();
             return Ok();
         }
         else

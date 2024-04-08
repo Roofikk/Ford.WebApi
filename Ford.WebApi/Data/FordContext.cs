@@ -14,22 +14,25 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
     public FordContext(DbContextOptions<FordContext> options)
         : base(options)
     {
-        //Database.EnsureDeleted();
-        //Database.EnsureCreated();
     }
 
     public virtual DbSet<Horse> Horses { get; set; } = null!;
     public virtual DbSet<Save> Saves { get; set; } = null!;
     public virtual DbSet<SaveBone> SaveBones { get; set; } = null!;
-    public virtual DbSet<UserHorse> HorseUsers { get; set; } = null!;
+    public virtual DbSet<HorseUser> HorseUsers { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite("Filename=../Ford.db");
+        string connection = "Server=RUFIKDESKTOP;Database=db-ford;User=dataworker;Password=Rufik2024;" +
+                            "TrustServerCertificate=True;" +
+                            "MultipleActiveResultSets=True;";
+        optionsBuilder.UseSqlServer(connection);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(x => x.Id).ValueGeneratedOnAdd();
@@ -59,24 +62,23 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
         {
             entity.Property(e => e.HorseId).ValueGeneratedOnAdd();
 
+            entity.HasMany(x => x.Users)
+                .WithMany(x => x.Horses)
+                .UsingEntity<HorseUser>(
+                    l => l.HasOne(x => x.User).WithMany(x => x.HorseUsers).HasForeignKey(x => x.UserId),
+                    r => r.HasOne(x => x.Horse).WithMany(x => x.HorseUsers).HasForeignKey(x => x.HorseId));
+
+            entity.HasOne(e => e.LastModifiedByUser)
+                .WithMany()
+                .HasForeignKey(k => k.LastModifiedByUserId);
+
             entity.HasIndex(x => x.Name)
                 .HasDatabaseName("IX_HorseNames");
         });
 
-        modelBuilder.Entity<UserHorse>(entity =>
+        modelBuilder.Entity<HorseUser>(entity =>
         {
-            entity.ToTable("UserHorses");
-            entity.HasKey(e => new { e.UserId, e.HorseId, });
-
-            entity.HasOne(d => d.User)
-                .WithMany(p => p.HorseOwners)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(d => d.Horse)
-                .WithMany(p => p.Users)
-                .HasForeignKey(d => d.HorseId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(x => x.AccessRole).HasDatabaseName("IX_HorseUserAccessRoles");
         });
 
         modelBuilder.Entity<Save>(entity =>
@@ -88,12 +90,12 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
                 .HasForeignKey(d => d.HorseId);
 
             entity.HasOne(d => d.CreatedByUser)
-                .WithMany(p => p.CreatedSaves)
+                .WithMany()
                 .HasForeignKey(d => d.CreatedByUserId);
 
             entity.HasOne(d => d.LastUpdatedByUser)
-                .WithMany(p => p.UpdatedSaves)
-                .HasForeignKey(k => k.LastUpdatedByUserId);
+                .WithMany()
+                .HasForeignKey(k => k.LastModifiedByUserId);
         });
 
         modelBuilder.Entity<SaveBone>(entity =>
@@ -102,9 +104,8 @@ public class FordContext : IdentityDbContext<User, IdentityRole<long>, long>
 
             entity.HasOne(d => d.Save)
                 .WithMany(p => p.SaveBones)
-                .HasForeignKey(d => d.SaveId);
+                .HasForeignKey(d => d.SaveId)
+                .IsRequired();
         });
-
-        base.OnModelCreating(modelBuilder);
     }
 }

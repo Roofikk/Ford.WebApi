@@ -17,15 +17,15 @@ namespace Ford.WebApi.Controllers;
 [ApiController]
 public class IdentityController : ControllerBase
 {
-    private readonly FordContext db;
+    private readonly FordContext _context;
     private readonly UserManager<User> userManager;
     private readonly RoleManager<IdentityRole<long>> roleManager;
     private readonly ITokenService tokenService;
 
-    public IdentityController(FordContext db, ITokenService tokenService, UserManager<User> userManager,
-        RoleManager<IdentityRole<long>> roleManager)
+    public IdentityController(FordContext context, ITokenService tokenService, 
+        UserManager<User> userManager, RoleManager<IdentityRole<long>> roleManager)
     {
-        this.db = db;
+        this._context = context;
         this.tokenService = tokenService;
         this.userManager = userManager;
         this.roleManager = roleManager;
@@ -49,7 +49,7 @@ public class IdentityController : ControllerBase
 
         User user = new User
         {
-            UserName = request.Login,
+            UserName = request.UserName,
             FirstName = request.FirstName,
             LastName = request.LastName,
             Email = request.Email,
@@ -76,8 +76,8 @@ public class IdentityController : ControllerBase
                 responseErrors));
         }
 
-        var findUser = db.Users.FirstOrDefault(u => u.UserName == request.Login) 
-            ?? throw new Exception($"User {request.Login} not found");
+        var findUser = await userManager.FindByNameAsync(request.UserName) 
+            ?? throw new Exception($"User {request.UserName} not found");
 
         IdentityRole<long>? memberRoleIdentity = await roleManager.FindByNameAsync(Roles.Member);
 
@@ -91,7 +91,7 @@ public class IdentityController : ControllerBase
         UserGettingDto userDto = new()
         {
             UserId = user.Id,
-            Login = user.UserName!,
+            UserName = user.UserName!,
             Email = user.Email,
             FirstName = user.FirstName,
             LastName = user.LastName,
@@ -113,7 +113,7 @@ public class IdentityController : ControllerBase
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<TokenDto>> Login([FromBody] UserLogin request)
     {
-        User? user = await userManager.FindByNameAsync(request.Login);
+        User? user = await userManager.FindByNameAsync(request.UserName);
 
         if (user is null)
         {
@@ -176,6 +176,14 @@ public class IdentityController : ControllerBase
         };
     }
 
+    [HttpGet]
+    [Authorize]
+    [Route("check-token")]
+    public IActionResult CheckToken()
+    {
+        return Ok();
+    }
+
     [HttpGet, Authorize]
     [Route("account")]
     [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
@@ -190,13 +198,13 @@ public class IdentityController : ControllerBase
                 Request.GetDisplayUrl(),
                 "Authorization",
                 HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("User's token", "Token is invalid") }));
+                [new("User's token", "Token is invalid")]));
         }
 
         UserGettingDto userDto = new()
         {
             UserId = user.Id,
-            Login = user.UserName!,
+            UserName = user.UserName!,
             Email = user.Email,
             FirstName = user.FirstName,
             LastName = user.LastName,
@@ -224,7 +232,7 @@ public class IdentityController : ControllerBase
                 Request.GetDisplayUrl(),
                 "Invalid data",
                 HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("Invalid data", "Body content is incorrect") }));
+                [new("Invalid data", "Body content is incorrect")]));
         }
 
         User? user = await userManager.GetUserAsync(User);
@@ -235,7 +243,7 @@ public class IdentityController : ControllerBase
                 Request.GetDisplayUrl(),
                 "Authorization",
                 HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("User's token", "Token is invalid") }));
+                [new("User's token", "Token is invalid")]));
         }
 
         user.FirstName = request.FirstName;
@@ -247,13 +255,12 @@ public class IdentityController : ControllerBase
         user.BirthDate = request.BirthDate is null ? null : request.BirthDate;
         user.LastUpdate = DateTime.UtcNow;
 
-        await db.SaveChangesAsync();
-
+        await _context.SaveChangesAsync();
 
         UserGettingDto userDto = new()
         {
             UserId = user.Id,
-            Login = user.UserName!,
+            UserName = user.UserName!,
             Email = user.Email,
             FirstName = user.FirstName,
             LastName = user.LastName,
@@ -283,7 +290,7 @@ public class IdentityController : ControllerBase
                 Request.GetDisplayUrl(),
                 "Authorization",
                 HttpStatusCode.Unauthorized,
-                new Collection<Error> { new("User's token", "Token is invalid") }));
+                [new("User's token", "Token is invalid")]));
         }
 
         IdentityResult result = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
@@ -306,7 +313,7 @@ public class IdentityController : ControllerBase
 
         return await Login(new UserLogin
         {
-            Login = user.UserName!,
+            UserName = user.UserName!,
             Password = request.NewPassword
         });
     }
