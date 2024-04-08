@@ -3,7 +3,6 @@ using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Extensions.Authentication;
 using Ford.WebApi.Filters;
 using Ford.WebApi.JsonConverters;
-using Ford.WebApi.PasswordHasher;
 using Ford.WebApi.Services;
 using Ford.WebApi.Services.HorseService;
 using Ford.WebApi.Services.Identity;
@@ -14,18 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
-using Ford.WebApi.PasswordHasher;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Ford.WebApi.Data.Entities;
-using Ford.WebApi.Data;
-using Ford.WebApi.Services.Identity;
-using Ford.WebApi.Extensions.Authentication;
-using Ford.WebApi.Services;
-using Ford.WebApi.Filters;
-using Microsoft.EntityFrameworkCore;
-using Ford.WebApi.Services.HorseService;
-using Ford.WebApi.JsonConverters;
 
 var builder = WebApplication.CreateBuilder(args);
 
