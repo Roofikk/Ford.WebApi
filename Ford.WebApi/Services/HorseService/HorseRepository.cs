@@ -176,7 +176,8 @@ public class HorseRepository : IHorseRepository
 
         _context.Entry(entity).State = EntityState.Modified;
 
-        if (entity.HorseUsers.SingleOrDefault(u => u.IsOwner) == null)
+        if (entity.HorseUsers.Where(x => _context.Entry(x).State != EntityState.Deleted)
+            .SingleOrDefault(u => u.IsOwner) == null)
         {
             entity.OwnerName = horseDto.OwnerName;
             entity.OwnerPhoneNumber = horseDto.OwnerPhoneNumber;
@@ -252,14 +253,14 @@ public class HorseRepository : IHorseRepository
             Country = horse.Country,
             OwnerName = horse.OwnerName,
             OwnerPhoneNumber = horse.OwnerPhoneNumber,
-        };
-
-        horseDto.CreatedBy = new()
-        {
-            Date = horse.CreationDate,
+            CreatedBy = new()
+            {
+                Date = horse.CreationDate,
+            }
         };
 
         HorseUser createdUser = horse.HorseUsers.Single(x => x.AccessRole == UserAccessRole.Creator.ToString());
+        await _context.Entry(createdUser).Reference(x => x.User).LoadAsync();
 
         horseDto.CreatedBy.User = new()
         {
@@ -276,17 +277,40 @@ public class HorseRepository : IHorseRepository
             Date = horse.LastModified,
         };
 
-        var lastUpdateUser = horse.HorseUsers.SingleOrDefault(x => x.UserId == horse.LastModifiedByUserId);
+        var lastUpdateUser = _context.Users.SingleOrDefault(x => x.Id == horse.LastModifiedByUserId);
 
-        horseDto.LastModifiedBy.User = new()
+        if (lastUpdateUser != null)
         {
-            AccessRole = lastUpdateUser?.AccessRole ?? "None",
-            IsOwner = lastUpdateUser?.IsOwner ?? false,
-            UserId = horse.LastModifiedByUser?.Id ?? -1,
-            FirstName = horse.LastModifiedByUser?.FirstName ?? "None",
-            LastName = horse.LastModifiedByUser?.LastName,
-            PhoneNumber = horse.LastModifiedByUser?.PhoneNumber
-        };
+            horseDto.LastModifiedBy.User = new()
+            {
+                UserId = lastUpdateUser.Id,
+                FirstName = lastUpdateUser.FirstName,
+                LastName = lastUpdateUser.LastName,
+                PhoneNumber = lastUpdateUser.PhoneNumber,
+                AccessRole = "None",
+                IsOwner = false,
+            };
+
+            var lastUpdateUserHorse = await _context.HorseUsers.SingleOrDefaultAsync(x => x.UserId == horse.LastModifiedByUserId && x.HorseId == horse.HorseId);
+
+            if (lastUpdateUserHorse != null)
+            {
+                horseDto.LastModifiedBy.User.AccessRole = lastUpdateUserHorse.AccessRole;
+                horseDto.LastModifiedBy.User.IsOwner = lastUpdateUserHorse.IsOwner;
+            }
+        }
+        else
+        {
+            horseDto.LastModifiedBy.User = new()
+            {
+                UserId = -1,
+                FirstName = "None",
+                LastName = "None",
+                PhoneNumber = "None",
+                AccessRole = "None",
+                IsOwner = false,
+            };
+        }
 
         foreach (var user in horse.HorseUsers)
         {

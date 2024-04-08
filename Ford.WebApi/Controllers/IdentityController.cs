@@ -108,10 +108,10 @@ public class IdentityController : ControllerBase
     }
 
     [HttpPost]
-    [Route("login")]
+    [Route("sign-in")]
     [ProducesResponseType(typeof(TokenDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(BadResponse), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<TokenDto>> Login([FromBody] UserLogin request)
+    public async Task<ActionResult<TokenDto>> SignIn([FromBody] UserLogin request)
     {
         User? user = await userManager.FindByNameAsync(request.UserName);
 
@@ -311,7 +311,7 @@ public class IdentityController : ControllerBase
                 responseErrors));
         }
 
-        return await Login(new UserLogin
+        return await SignIn(new UserLogin
         {
             UserName = user.UserName!,
             Password = request.NewPassword

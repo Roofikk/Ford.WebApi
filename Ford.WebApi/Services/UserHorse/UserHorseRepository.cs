@@ -301,31 +301,34 @@ public class UserHorseRepository : IUserHorseRepository
     public async Task<ServiceResult<ICollection<HorseUser>>> UpdateAsync(long currentUserId, long horseId, ICollection<RequestHorseUser> requestUsers)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
-        var users = _context.HorseUsers.Where(x => x.HorseId == horseId);
-        var horseUser = users.SingleOrDefault(u => u.UserId == currentUserId);
-        var creator = users.SingleOrDefault(u => u.AccessRole == UserAccessRole.Creator.ToString());
+        var users = _context.HorseUsers.Where(x => x.HorseId == horseId && x.UserId != currentUserId &&
+            x.AccessRole != UserAccessRole.Creator.ToString());
+        var horseUser = _context.HorseUsers.SingleOrDefault(x => x.HorseId == horseId && x.UserId == currentUserId);
+        var creator = _context.HorseUsers.SingleOrDefault(u => u.AccessRole == UserAccessRole.Creator.ToString());
 
         // check access to action
         if (Enum.Parse<UserAccessRole>(horseUser!.AccessRole) < UserAccessRole.All)
         {
             return new ServiceResult<ICollection<HorseUser>>
             {
-                Success = false,
-                ErrorMessage = "You don't have permission for update or add users",
+                Success = true,
+                ErrorMessage = "Users not changed. You don't have permission for update or add users",
             };
         }
 
-        // add self
-        var self = requestUsers.SingleOrDefault(u => u.UserId == horseUser.UserId);
+        var self = requestUsers.SingleOrDefault(u => u.UserId == currentUserId);
 
-        if (self == null)
+        if (self != null)
         {
-            requestUsers.Add(new()
-            {
-                AccessRole = horseUser.AccessRole,
-                UserId = horseUser.UserId,
-                IsOwner = horseUser.IsOwner
-            });
+            horseUser.IsOwner = self.IsOwner;
+            requestUsers.Remove(self);
+        }
+
+        var creatorRequest = requestUsers.SingleOrDefault(u => u.UserId == creator!.UserId);
+
+        if (creatorRequest != null)
+        {
+            requestUsers.Remove(creatorRequest);
         }
 
         // select users for delete
