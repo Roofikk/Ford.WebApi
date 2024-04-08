@@ -15,9 +15,13 @@ public class UsersController : ControllerBase
 {
     private readonly FordContext _context;
     private readonly UserManager<User> _userManager;
+#pragma warning disable CS0169 // The field 'UsersController._roleManager' is never used
     private readonly RoleManager<IdentityRole<long>> _roleManager;
+#pragma warning restore CS0169 // The field 'UsersController._roleManager' is never used
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     public UsersController(FordContext context, UserManager<User> userManager)
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     {
         _context = context;
         this._userManager = userManager;

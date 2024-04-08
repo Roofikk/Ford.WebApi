@@ -25,11 +25,11 @@ namespace Ford.WebApi.Filters
             var user = (User)context.HttpContext.Items["user"]!;
 
             HorseUser? horseUser = null;
-            
+
             if (context.ActionArguments.TryGetValue("requestSave", out var value))
             {
-                var requestSave = value as IRequestSave; 
-                
+                var requestSave = value as IRequestSave;
+
                 switch (requestSave)
                 {
                     case SaveCreatingDto requestCreateSaveDto:

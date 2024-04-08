@@ -1,6 +1,4 @@
-﻿using Ford.WebApi.Dtos.Horse;
-
-namespace Ford.WebApi.Dtos.Response;
+﻿namespace Ford.WebApi.Dtos.Response;
 
 public interface IResponseSave
 {

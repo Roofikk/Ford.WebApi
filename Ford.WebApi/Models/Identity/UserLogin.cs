@@ -1,6 +1,4 @@
-﻿using System.Security.Claims;
-
-namespace Ford.WebApi.Models.Identity;
+﻿namespace Ford.WebApi.Models.Identity;
 
 public class UserLogin
 {

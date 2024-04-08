@@ -23,7 +23,7 @@ namespace Ford.WebApi.Filters
                 context.Result = new StatusCodeResult(StatusCodes.Status403Forbidden);
             }
 
-            context.HttpContext.Items.Add("user", user); 
+            context.HttpContext.Items.Add("user", user);
 
             await next();
         }

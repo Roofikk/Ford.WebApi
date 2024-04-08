@@ -1,14 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Ford.WebApi.Data.Entities;
-using Microsoft.AspNetCore.Authorization;
-using Ford.WebApi.Dtos.Response;
+﻿using Ford.WebApi.Data.Entities;
 using Ford.WebApi.Dtos.Horse;
-using Microsoft.AspNetCore.Http.Extensions;
-using System.Net;
+using Ford.WebApi.Dtos.Request;
+using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Filters;
 using Ford.WebApi.Services;
 using Ford.WebApi.Services.HorseService;
-using Ford.WebApi.Dtos.Request;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace Ford.WebApi.Controllers;
 
@@ -92,7 +92,7 @@ public class HorsesController : ControllerBase
                             throw new ArgumentException("CreatingHorseAction is not HorseRetrievingDto");
 
                         var horseSaves = history.Where(x => x.Data is FullSaveDto saveDto && saveDto.HorseId == creatingHorse.HorseId);
-                        
+
                         var creatingHorseDto = new HorseCreatingDto()
                         {
                             Name = creatingHorse.Name,
@@ -108,7 +108,7 @@ public class HorsesController : ControllerBase
 
                         foreach (var horseSave in horseSaves)
                         {
-                            var horseSaveDto = horseSave.Data as FullSaveDto 
+                            var horseSaveDto = horseSave.Data as FullSaveDto
                                 ?? throw new ArgumentException("HorseSaveAction is not SaveCreatingDto");
 
                             var creatingSave = new HorseSaveCreatingDto()

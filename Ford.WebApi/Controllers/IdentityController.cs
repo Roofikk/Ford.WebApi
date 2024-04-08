@@ -1,15 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Identity;
+﻿using Ford.WebApi.Data;
 using Ford.WebApi.Data.Entities;
-using Ford.WebApi.Data;
-using Ford.WebApi.Services.Identity;
+using Ford.WebApi.Dtos.Response;
 using Ford.WebApi.Dtos.User;
 using Ford.WebApi.Models.Identity;
-using Ford.WebApi.Dtos.Response;
-using System.Net;
+using Ford.WebApi.Services.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.ObjectModel;
+using System.Net;
 
 namespace Ford.WebApi.Controllers;
 
@@ -22,7 +22,7 @@ public class IdentityController : ControllerBase
     private readonly RoleManager<IdentityRole<long>> roleManager;
     private readonly ITokenService tokenService;
 
-    public IdentityController(FordContext context, ITokenService tokenService, 
+    public IdentityController(FordContext context, ITokenService tokenService,
         UserManager<User> userManager, RoleManager<IdentityRole<long>> roleManager)
     {
         this._context = context;
@@ -47,7 +47,7 @@ public class IdentityController : ControllerBase
                 new Collection<Error> { new("Invalid data", "Model state is invalid. Check correctly input.") }));
         }
 
-        User user = new User
+        User user = new()
         {
             UserName = request.UserName,
             FirstName = request.FirstName,
@@ -76,7 +76,7 @@ public class IdentityController : ControllerBase
                 responseErrors));
         }
 
-        var findUser = await userManager.FindByNameAsync(request.UserName) 
+        var findUser = await userManager.FindByNameAsync(request.UserName)
             ?? throw new Exception($"User {request.UserName} not found");
 
         IdentityRole<long>? memberRoleIdentity = await roleManager.FindByNameAsync(Roles.Member);
@@ -144,7 +144,7 @@ public class IdentityController : ControllerBase
         return new TokenDto
         {
             Token = token.JwtToken,
-            RefreshToken= token.RefreshToken
+            RefreshToken = token.RefreshToken
         };
     }
 

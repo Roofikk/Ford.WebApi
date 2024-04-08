@@ -12,7 +12,7 @@ public class HorseRepository : IHorseRepository
     private readonly ISaveRepository _saveService;
     private readonly IUserHorseRepository _userHorseRepository;
 
-    public HorseRepository(FordContext context, ISaveRepository saveService, 
+    public HorseRepository(FordContext context, ISaveRepository saveService,
         IUserHorseRepository userHorseRepository)
     {
         _context = context;

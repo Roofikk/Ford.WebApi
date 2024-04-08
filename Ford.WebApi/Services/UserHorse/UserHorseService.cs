@@ -297,7 +297,9 @@ public class UserHorseService : IUserHorseRepository
     //    };
     //}
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     public async Task<ServiceResult<ICollection<HorseUser>>> UpdateAsync(long currentUserId, long horseId, ICollection<RequestHorseUser> requestUsers)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         var users = _context.HorseUsers.Where(x => x.HorseId == horseId);
         var horseUser = users.SingleOrDefault(u => u.UserId == currentUserId);

@@ -1,6 +1,4 @@
-﻿using Ford.WebApi.Dtos.Horse;
-
-namespace Ford.WebApi.Dtos.Request;
+﻿namespace Ford.WebApi.Dtos.Request;
 
 public class RequestUpdateSaveDto : IRequestSave
 {

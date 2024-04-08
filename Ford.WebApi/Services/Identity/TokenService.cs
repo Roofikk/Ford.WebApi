@@ -55,7 +55,7 @@ public class TokenService : ITokenService
 
         return new Token
         {
-            JwtToken= jwtToken,
+            JwtToken = jwtToken,
             RefreshToken = refreshToken,
             ExpiredDate = DateTime.UtcNow.AddDays(14)
         };
