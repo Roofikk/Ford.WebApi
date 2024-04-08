@@ -209,7 +209,7 @@ public class SaveRepository : ISaveRepository
         };
     }
 
-    public async Task<ServiceResult<SaveDto>> UpdateAsync(RequestUpdateSaveDto requestSave, long userId)
+    public async Task<ServiceResult<SaveDto>> UpdateAsync(SaveUpdatingDto requestSave, long userId)
     {
         var save = await _context.Saves
             .SingleOrDefaultAsync(s => s.SaveId == requestSave.SaveId);

@@ -24,13 +24,13 @@ public class UsersController : ControllerBase
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     {
         _context = context;
-        this._userManager = userManager;
+        _userManager = userManager;
     }
 
     [HttpGet()]
     [Authorize]
-    [ProducesResponseType(typeof(IEnumerable<UserGettingDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(UserGettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(long? userId)
     {
@@ -124,9 +124,9 @@ public class UsersController : ControllerBase
         }
     }
 
-    private UserGettingDto MapUser(User user)
+    private UserDto MapUser(User user)
     {
-        var userDto = new UserGettingDto()
+        var userDto = new UserDto()
         {
             UserId = user.Id,
             UserName = user.UserName!,

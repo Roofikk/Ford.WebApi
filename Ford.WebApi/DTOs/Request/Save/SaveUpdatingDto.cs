@@ -1,6 +1,6 @@
 ﻿namespace Ford.WebApi.Dtos.Request;
 
-public class RequestUpdateSaveDto : IRequestSave
+public class SaveUpdatingDto : IRequestSave
 {
     public long SaveId { get; set; }
     public string Header { get; set; } = null!;

@@ -7,11 +7,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ford.WebApi.Services;
 
-public class UserHorseService : IUserHorseRepository
+public class UserHorseRepository : IUserHorseRepository
 {
     private readonly FordContext _context;
 
-    public UserHorseService(FordContext context)
+    public UserHorseRepository(FordContext context)
     {
         _context = context;
     }
@@ -45,7 +45,7 @@ public class UserHorseService : IUserHorseRepository
 
         List<HorseUser> users = new();
 
-        if (containsUsers.Count() == requestHorseUsers.Count())
+        if (containsUsers.Count() == requestHorseUsers.Count)
         {
             foreach (var reqUser in requestHorseUsers)
             {
@@ -132,7 +132,7 @@ public class UserHorseService : IUserHorseRepository
 
         List<HorseUser> users = new();
 
-        if (containsUsers.Count() == requestHorseUsers.Count())
+        if (containsUsers.Count() == requestHorseUsers.Count)
         {
             foreach (var reqUser in requestHorseUsers)
             {
